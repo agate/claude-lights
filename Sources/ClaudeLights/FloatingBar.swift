@@ -168,7 +168,15 @@ final class FloatingBar: NSObject, NSWindowDelegate {
             let size = host.fittingSize
             if size.width > 0, size != panel.frame.size {
                 panel.setContentSize(size)
-                if pinned { applyPin(animate: false) }
+            }
+        }
+        if let logPath = ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEBUG_LOG"] {
+            let fitting = (panel.contentView as? NSHostingView<BarView>)?.fittingSize ?? .zero
+            let line = "\(Date()) frame=\(panel.frame) fitting=\(fitting) pinned=\(pinned) sessions=\(store.sessions.count)\n"
+            if let data = line.data(using: .utf8), let h = FileHandle(forWritingAtPath: logPath) {
+                h.seekToEndOfFile(); h.write(data); try? h.close()
+            } else {
+                try? line.write(toFile: logPath, atomically: true, encoding: .utf8)
             }
         }
         let shouldShow = !store.sessions.isEmpty && !manuallyHidden
@@ -196,6 +204,13 @@ final class FloatingBar: NSObject, NSWindowDelegate {
         manuallyHidden.toggle()
         UserDefaults.standard.set(manuallyHidden, forKey: FloatingBar.hiddenKey)
         refresh()
+    }
+
+    /// NSHostingView auto-resizes the panel (anchored bottom-left) whenever
+    /// the SwiftUI content changes size — our poll-time size diffing never
+    /// sees it. Re-anchor the top-right corner on every actual resize.
+    func windowDidResize(_ notification: Notification) {
+        if pinned { applyPin(animate: false) }
     }
 
     func windowDidMove(_ notification: Notification) {
