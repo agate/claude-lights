@@ -1,0 +1,56 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Claude Lights app icon: a terminal window whose three window buttons
+       are the traffic lights (status), holding a warm spark (the agent). -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#262E3F"/>
+      <stop offset="1" stop-color="#10141D"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#D97757" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#D97757" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="spark" gradientUnits="userSpaceOnUse" x1="0" y1="-260" x2="0" y2="260">
+      <stop offset="0" stop-color="#E8926F"/>
+      <stop offset="1" stop-color="#C96442"/>
+    </linearGradient>
+    <clipPath id="squircle">
+      <rect x="100" y="100" width="824" height="824" rx="184"/>
+    </clipPath>
+  </defs>
+
+  <!-- icon plate -->
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#bg)"/>
+
+  <g clip-path="url(#squircle)">
+    <!-- title bar -->
+    <rect x="100" y="100" width="824" height="156" fill="#FFFFFF" opacity="0.05"/>
+    <rect x="100" y="252" width="824" height="4" fill="#000000" opacity="0.25"/>
+
+    <!-- agent glow -->
+    <circle cx="512" cy="600" r="340" fill="url(#glow)"/>
+  </g>
+
+  <!-- traffic lights = window buttons -->
+  <circle cx="212" cy="178" r="35" fill="#FF5F57"/>
+  <circle cx="310" cy="178" r="35" fill="#FEBC2E"/>
+  <circle cx="408" cy="178" r="35" fill="#28C840"/>
+
+  <!-- agent spark: irregular starburst — 12 tapered rays with jittered
+       angles and uneven lengths, converging on a solid core -->
+  <g transform="translate(512,600)" fill="url(#spark)" stroke="url(#spark)"
+     stroke-width="14" stroke-linejoin="round">
+    <polygon points="-40,0 40,0 13,-255 -13,-255" transform="rotate(4)"/>
+    <polygon points="-40,0 40,0 13,-212 -13,-212" transform="rotate(33)"/>
+    <polygon points="-40,0 40,0 13,-242 -13,-242" transform="rotate(64)"/>
+    <polygon points="-40,0 40,0 13,-204 -13,-204" transform="rotate(92)"/>
+    <polygon points="-40,0 40,0 13,-250 -13,-250" transform="rotate(122)"/>
+    <polygon points="-40,0 40,0 13,-210 -13,-210" transform="rotate(150)"/>
+    <polygon points="-40,0 40,0 13,-245 -13,-245" transform="rotate(184)"/>
+    <polygon points="-40,0 40,0 13,-200 -13,-200" transform="rotate(213)"/>
+    <polygon points="-40,0 40,0 13,-236 -13,-236" transform="rotate(243)"/>
+    <polygon points="-40,0 40,0 13,-215 -13,-215" transform="rotate(272)"/>
+    <polygon points="-40,0 40,0 13,-250 -13,-250" transform="rotate(302)"/>
+    <polygon points="-40,0 40,0 13,-206 -13,-206" transform="rotate(331)"/>
+  </g>
+</svg>
