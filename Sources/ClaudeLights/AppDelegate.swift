@@ -60,6 +60,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         poller.start()
 
+        if ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEBUG_LOG"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
+                self?.bar.debugLogHitTest()
+                self?.bar.debugSyntheticClick()
+            }
+        }
+
         // Demo hook: CLAUDE_LIGHTS_DEMO_OPEN_MENU=<seconds> pops the tray
         // menu after a delay so screenshots can be taken unattended.
         if let raw = ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEMO_OPEN_MENU"],
@@ -72,6 +79,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Jumping to a session counts as looking at it.
     private func jump(to session: Session) {
+        if let logPath = ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEBUG_LOG"],
+           let h = FileHandle(forWritingAtPath: logPath) {
+            h.seekToEndOfFile()
+            h.write("jump invoked for \(session.id)\n".data(using: .utf8)!)
+            try? h.close()
+        }
         poller.markSeen(session.id)
         jumper.jump(to: session)
     }

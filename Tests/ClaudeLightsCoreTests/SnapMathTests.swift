@@ -28,6 +28,37 @@ final class SnapMathTests: XCTestCase {
         XCTAssertEqual(origin, CGPoint(x: 880, y: 570))
     }
 
+    func testFractionRoundTrip() {
+        let size = CGSize(width: 100, height: 30)
+        let origin = CGPoint(x: 450, y: 285) // center of available space
+        let f = SnapMath.fraction(origin: origin, size: size, visible: visible)
+        XCTAssertEqual(f.x, 0.5, accuracy: 0.001)
+        XCTAssertEqual(f.y, 0.5, accuracy: 0.001)
+        let back = SnapMath.origin(fraction: f, size: size, visible: visible)
+        XCTAssertEqual(back, origin)
+    }
+
+    func testFractionAppliesToDifferentScreen() {
+        let size = CGSize(width: 100, height: 30)
+        // Top-right-ish on the first screen…
+        let f = SnapMath.fraction(origin: CGPoint(x: 900, y: 570), size: size, visible: visible)
+        // …lands top-right-ish on a screen with other bounds and offset.
+        let other = CGRect(x: 2000, y: 100, width: 500, height: 400)
+        let origin = SnapMath.origin(fraction: f, size: size, visible: other)
+        XCTAssertEqual(origin, CGPoint(x: 2400, y: 470))
+    }
+
+    func testFractionClampsOutOfBounds() {
+        let size = CGSize(width: 100, height: 30)
+        let f = SnapMath.fraction(origin: CGPoint(x: 5000, y: -50), size: size, visible: visible)
+        XCTAssertEqual(f, CGPoint(x: 1, y: 0))
+        // Bar wider than the screen: degenerate space maps to 0 / origin edge.
+        let tiny = CGRect(x: 0, y: 0, width: 80, height: 20)
+        XCTAssertEqual(SnapMath.fraction(origin: .zero, size: size, visible: tiny), .zero)
+        XCTAssertEqual(SnapMath.origin(fraction: CGPoint(x: 0.5, y: 0.5), size: size, visible: tiny),
+                       CGPoint(x: 0, y: 0))
+    }
+
     func testPinnedOriginTracksWidthChanges() {
         // Wider bar: right edge stays at visible.maxX.
         let wide = SnapMath.pinnedOrigin(barSize: CGSize(width: 200, height: 30),

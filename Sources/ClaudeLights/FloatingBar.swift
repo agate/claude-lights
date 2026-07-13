@@ -65,8 +65,16 @@ struct BarView: View {
     }
 }
 
+/// Accepts the first click even though the panel never becomes key
+/// (non-activating): without this, physical clicks are swallowed by the
+/// window-activation policy and never reach the SwiftUI gestures.
+private final class FirstMouseHostingView: NSHostingView<BarView> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 final class FloatingBar: NSObject, NSWindowDelegate {
-    private static let originKey = "barOrigin"
+    private static let originKey = "barOrigin" // legacy absolute position
+    private static let fractionKey = "barFraction"
     private static let hiddenKey = "barHidden"
     private static let pinnedKey = "barPinnedTopRight"
     private static let snapThreshold: CGFloat = 40
@@ -100,7 +108,7 @@ final class FloatingBar: NSObject, NSWindowDelegate {
         panel.isFloatingPanel = true
         panel.becomesKeyOnlyIfNeeded = true
         panel.delegate = self
-        panel.contentView = NSHostingView(rootView: BarView(
+        panel.contentView = FirstMouseHostingView(rootView: BarView(
             store: store,
             onJump: onJump,
             onHover: { [weak self] session, hovering, anchor in
@@ -109,6 +117,44 @@ final class FloatingBar: NSObject, NSWindowDelegate {
 
         configureTooltipPanel()
         restoreOrigin()
+
+        // Displays changing (e.g. a monitor unplugged) reposition immediately;
+        // regular focus-following happens on every poll via refresh().
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in self?.followFocusedScreen() }
+    }
+
+    /// The screen the user is working on — approximated by cursor location.
+    private var focusedScreen: NSScreen? {
+        let mouse = NSEvent.mouseLocation
+        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) }
+            ?? panel.screen ?? NSScreen.main ?? NSScreen.screens.first
+    }
+
+    /// Keeps the bar on the screen the user is focused on. Pinned bars stick
+    /// to that screen's top-right; free bars keep their relative position.
+    private func followFocusedScreen() {
+        guard panel.isVisible, let screen = focusedScreen else { return }
+        if pinned {
+            applyPin(animate: false)
+        } else if panel.screen?.frame != screen.frame {
+            let origin = SnapMath.origin(fraction: savedFraction(),
+                                         size: panel.frame.size,
+                                         visible: screen.visibleFrame)
+            isProgrammaticMove = true
+            panel.setFrameOrigin(origin)
+            isProgrammaticMove = false
+        }
+    }
+
+    private func savedFraction() -> CGPoint {
+        if let f = UserDefaults.standard.array(forKey: FloatingBar.fractionKey) as? [Double],
+           f.count == 2 {
+            return CGPoint(x: f[0], y: f[1])
+        }
+        return CGPoint(x: 0.9, y: 0.97)
     }
 
     private func configureTooltipPanel() {
@@ -182,10 +228,41 @@ final class FloatingBar: NSObject, NSWindowDelegate {
         let shouldShow = !store.sessions.isEmpty && !manuallyHidden
         if shouldShow {
             panel.orderFrontRegardless()
+            followFocusedScreen()
         } else {
             panel.removeChildWindow(tooltipPanel)
             tooltipPanel.orderOut(nil)
             panel.orderOut(nil)
+        }
+    }
+
+    /// Debug hook: logs which view AppKit hit-testing resolves at the first
+    /// dot's position — reveals whether an NSView is swallowing clicks.
+    func debugLogHitTest() {
+        guard let logPath = ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEBUG_LOG"],
+              let content = panel.contentView else { return }
+        let point = NSPoint(x: 18, y: content.bounds.midY)
+        let hit = content.hitTest(point)
+        let line = "hitTest at \(point) -> \(hit.map { String(describing: type(of: $0)) } ?? "nil")\n"
+        if let data = line.data(using: .utf8), let h = FileHandle(forWritingAtPath: logPath) {
+            h.seekToEndOfFile(); h.write(data); try? h.close()
+        }
+    }
+
+    /// Debug hook: synthesizes a click on the first dot, delivered straight
+    /// to the panel — tests the gesture pipeline while bypassing the system
+    /// event routing (first-mouse/activation policies).
+    func debugSyntheticClick() {
+        guard let content = panel.contentView else { return }
+        let local = NSPoint(x: 18, y: content.bounds.midY)
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            if let event = NSEvent.mouseEvent(
+                with: type, location: local, modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: panel.windowNumber, context: nil,
+                eventNumber: 0, clickCount: 1, pressure: 1) {
+                panel.sendEvent(event)
+            }
         }
     }
 
@@ -238,13 +315,14 @@ final class FloatingBar: NSObject, NSWindowDelegate {
         if pinned {
             applyPin(animate: true)
         } else {
-            UserDefaults.standard.set([panel.frame.origin.x, panel.frame.origin.y],
-                                      forKey: FloatingBar.originKey)
+            let fraction = SnapMath.fraction(origin: panel.frame.origin,
+                                             size: panel.frame.size, visible: visible)
+            UserDefaults.standard.set([fraction.x, fraction.y], forKey: FloatingBar.fractionKey)
         }
     }
 
     private func applyPin(animate: Bool) {
-        guard let visible = (panel.screen ?? NSScreen.main)?.visibleFrame else { return }
+        guard let visible = focusedScreen?.visibleFrame else { return }
         let origin = SnapMath.pinnedOrigin(barSize: panel.frame.size, visible: visible)
         guard origin != panel.frame.origin else { return }
         isProgrammaticMove = true
@@ -262,12 +340,22 @@ final class FloatingBar: NSObject, NSWindowDelegate {
     private func restoreOrigin() {
         if pinned {
             applyPin(animate: false)
-        } else if let saved = UserDefaults.standard.array(forKey: FloatingBar.originKey) as? [Double],
-           saved.count == 2 {
-            panel.setFrameOrigin(NSPoint(x: saved[0], y: saved[1]))
-        } else if let screen = NSScreen.main {
-            let frame = screen.visibleFrame
-            panel.setFrameOrigin(NSPoint(x: frame.maxX - 240, y: frame.maxY - 44))
+            return
+        }
+        // Migrate a legacy absolute origin to the screen-relative fraction.
+        if UserDefaults.standard.array(forKey: FloatingBar.fractionKey) == nil,
+           let legacy = UserDefaults.standard.array(forKey: FloatingBar.originKey) as? [Double],
+           legacy.count == 2, let visible = NSScreen.main?.visibleFrame {
+            let fraction = SnapMath.fraction(origin: CGPoint(x: legacy[0], y: legacy[1]),
+                                             size: panel.frame.size, visible: visible)
+            UserDefaults.standard.set([fraction.x, fraction.y], forKey: FloatingBar.fractionKey)
+            UserDefaults.standard.removeObject(forKey: FloatingBar.originKey)
+        }
+        if let visible = (focusedScreen ?? NSScreen.main)?.visibleFrame {
+            isProgrammaticMove = true
+            panel.setFrameOrigin(SnapMath.origin(fraction: savedFraction(),
+                                                 size: panel.frame.size, visible: visible))
+            isProgrammaticMove = false
         }
     }
 }
