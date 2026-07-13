@@ -3,12 +3,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-swift build -c release
+# Universal binary so Intel Macs work too.
+swift build -c release --arch arm64 --arch x86_64
+BIN=.build/apple/Products/Release/ClaudeLights
 
 APP=build/ClaudeLights.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp .build/release/ClaudeLights "$APP/Contents/MacOS/ClaudeLights"
+cp "$BIN" "$APP/Contents/MacOS/ClaudeLights"
 cp assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'

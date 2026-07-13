@@ -18,14 +18,42 @@ The bar updates live as sessions change state:
 - Claude Code ≥ 2.1.139 (reads `~/.claude/sessions/*.json`)
 - tmux (optional — needed for click-to-jump)
 
-## Build & run
+## Install
+
+### Option 1 — Build from source (recommended)
 
 ```bash
+git clone https://github.com/agate/claude-lights.git
+cd claude-lights
 scripts/bundle.sh
 open build/ClaudeLights.app
 ```
 
-Grant the notification permission on first launch.
+Building locally avoids macOS quarantine entirely and lets you audit what
+you run. Requires the Xcode command line tools (`xcode-select --install`).
+
+### Option 2 — Download a release
+
+Grab `ClaudeLights.zip` from the [latest release](https://github.com/agate/claude-lights/releases),
+unzip, and move `ClaudeLights.app` wherever you like (e.g. `/Applications`).
+
+The app is not notarized (no Apple Developer certificate), so on first
+launch macOS will refuse to open it. Either:
+
+- open **System Settings → Privacy & Security** and click **Open Anyway**
+  after the first failed attempt, or
+- clear the quarantine flag yourself:
+
+  ```bash
+  xattr -d com.apple.quarantine /path/to/ClaudeLights.app
+  ```
+
+The binary is universal (Apple Silicon + Intel).
+
+### First launch
+
+Grant the notification permission when asked; the first click-to-jump also
+asks once for permission to control iTerm2/Terminal.
 
 ## Usage
 
