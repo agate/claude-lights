@@ -45,6 +45,19 @@ final class TmuxMapperTests: XCTestCase {
         XCTAssertEqual(active, ["main:1"])
     }
 
+    func testAttachCommandQuotesSessionNames() {
+        XCTAssertEqual(
+            TmuxMapper.attachCommand(tmuxPath: "/opt/homebrew/bin/tmux", session: "main"),
+            "/opt/homebrew/bin/tmux attach -t 'main'")
+        XCTAssertEqual(
+            TmuxMapper.attachCommand(tmuxPath: "/usr/local/bin/tmux", session: "work session"),
+            "/usr/local/bin/tmux attach -t 'work session'")
+        // Single quotes in the name must not break out of the shell quoting.
+        XCTAssertEqual(
+            TmuxMapper.attachCommand(tmuxPath: "/usr/bin/tmux", session: "it's"),
+            "/usr/bin/tmux attach -t 'it'\\''s'")
+    }
+
     func testEmptyInputs() {
         XCTAssertEqual(TmuxMapper.parsePanes("").count, 0)
         XCTAssertEqual(TmuxMapper.parsePidTtys("").count, 0)

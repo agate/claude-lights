@@ -20,6 +20,11 @@ final class Jumper {
         // Find (or retarget) the client that shows this tmux session.
         let clients = TmuxMapper.parseClients(
             Shell.run(tmuxPath, ["list-clients", "-F", TmuxMapper.clientsFormat]) ?? "")
+        guard !clients.isEmpty else {
+            // Every terminal window is gone: offer to open one attached here.
+            offerToOpenWindow(attachingTo: tmuxSession)
+            return
+        }
         var hostTty: String?
         if let attached = clients.first(where: { $0.sessionName == tmuxSession }) {
             hostTty = attached.tty
@@ -89,6 +94,52 @@ final class Jumper {
             .contains(where: { $0.bundleIdentifier == bundleId }) else { return false }
         let out = Shell.run("/usr/bin/osascript", ["-e", script])
         return out?.trimmingCharacters(in: .whitespacesAndNewlines) == "ok"
+    }
+
+    /// No tmux client anywhere (all terminal windows closed). Ask, then open
+    /// a fresh terminal window attached to the target session.
+    private func offerToOpenWindow(attachingTo session: String) {
+        guard let tmuxPath, let bundleId = preferredTerminalBundleId() else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "No terminal window is attached to tmux"
+        alert.informativeText =
+            "Open a new terminal window attached to “\(session)”?"
+        alert.addButton(withTitle: "Open Window")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        let attach = TmuxMapper.attachCommand(tmuxPath: tmuxPath, session: session)
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        let script: String
+        if bundleId == "com.googlecode.iterm2" {
+            script = """
+            tell application "iTerm2"
+                activate
+                create window with default profile command "\(attach)"
+            end tell
+            """
+        } else {
+            script = """
+            tell application "Terminal"
+                activate
+                do script "\(attach)"
+            end tell
+            """
+        }
+        Shell.run("/usr/bin/osascript", ["-e", script])
+    }
+
+    /// iTerm2 or Apple Terminal — whichever is running, else installed.
+    private func preferredTerminalBundleId() -> String? {
+        let candidates = ["com.googlecode.iterm2", "com.apple.Terminal"]
+        if let running = candidates.first(where: { id in
+            NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier == id }
+        }) { return running }
+        return candidates.first {
+            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) != nil
+        }
     }
 
     /// Finds the GUI app hosting the attached tmux client by walking up its

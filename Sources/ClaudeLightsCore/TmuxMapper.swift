@@ -72,6 +72,13 @@ public enum TmuxMapper {
         return result
     }
 
+    /// Shell command that attaches a new terminal window to a tmux session,
+    /// with the session name safely single-quoted.
+    public static func attachCommand(tmuxPath: String, session: String) -> String {
+        let quoted = session.replacingOccurrences(of: "'", with: "'\\''")
+        return "\(tmuxPath) attach -t '\(quoted)'"
+    }
+
     public static func target(forPid pid: Int, pidTtys: [Int: String], panes: [TmuxPane]) -> TmuxPane? {
         guard let tty = pidTtys[pid] else { return nil }
         return panes.first { $0.tty == tty }
