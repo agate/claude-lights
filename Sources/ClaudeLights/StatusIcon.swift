@@ -34,7 +34,9 @@ enum StatusIcon {
             guard let gear = NSImage(systemSymbolName: "gearshape.fill",
                                      accessibilityDescription: "running")?
                 .withSymbolConfiguration(config) else { return nil }
-            return tightWhiteMark(canvas: gear.size.width + 6) { rect in
+            // Canvas is doubled so a centroid-centered crop has room to pad
+            // symmetrically without being clamped at the edge.
+            return tightWhiteMark(canvas: gear.size.width * 2) { rect in
                 let g = gear.size
                 gear.draw(in: NSRect(x: rect.midX - g.width / 2, y: rect.midY - g.height / 2,
                                      width: g.width, height: g.height))
@@ -45,7 +47,7 @@ enum StatusIcon {
         let text = NSAttributedString(string: glyph,
                                       attributes: [.font: font, .foregroundColor: NSColor.white])
         let sz = text.size()
-        return tightWhiteMark(canvas: max(sz.width, sz.height) + 6) { rect in
+        return tightWhiteMark(canvas: max(sz.width, sz.height) * 2) { rect in
             text.draw(at: NSPoint(x: rect.midX - sz.width / 2, y: rect.midY - sz.height / 2))
         }
     }
