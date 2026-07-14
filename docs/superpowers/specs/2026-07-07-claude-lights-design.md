@@ -121,12 +121,17 @@ Swift + AppKit/SwiftUI menu bar app (`LSUIElement`, no Dock icon). Four modules:
      inside its tmux session;
   2. if no client is attached to that tmux session, one is retargeted via
      `switch-client -c <client_tty>`;
-  3. the exact window/tab hosting the client's tty is focused via
-     AppleScript — iTerm2 (sessions expose tty) and Apple Terminal (tabs
-     expose tty) are supported; both focusers match by tty so trying them in
-     sequence is safe (`NSAppleEventsUsageDescription` declared; user grants
-     automation once per app). Fallback when neither matches or automation
-     is denied: walk up the tmux client's process tree and activate the
+  3. the client's hosting app is identified by walking its process
+     ancestry, then focused per terminal:
+     - iTerm2 / Apple Terminal: AppleScript tty matching selects the exact
+       window/tab (`NSAppleEventsUsageDescription` declared; user grants
+       automation once per app);
+     - VS Code (tmux inside the integrated terminal): all integrated
+       terminals live in one shared pty-host process, so a tty cannot
+       select a window — instead `code <session cwd>` focuses the window
+       whose workspace has that folder open (window-level only; selecting
+       the terminal tab inside would need a companion extension).
+     Fallback when nothing matches or automation is denied: activate the
      hosting terminal app. Sessions with no tmux pane (bare
      tty) still show status; a click activates the terminal only.
 - **Notify**: on transition *into* red only (no repeats while red persists):

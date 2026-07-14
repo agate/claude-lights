@@ -3,7 +3,8 @@ import AppKit
 /// Tracks whether a known terminal app is frontmost, so the poller (on its
 /// own queue) can read it without touching NSWorkspace off the main thread.
 final class FrontmostWatcher {
-    static let knownTerminals = ["iTerm2", "Ghostty", "WezTerm", "kitty", "Alacritty", "Terminal"]
+    static let knownTerminals = ["iTerm2", "Ghostty", "WezTerm", "kitty", "Alacritty", "Terminal",
+                                 "Code", "Visual Studio Code"]
 
     private let lock = NSLock()
     private var value = false

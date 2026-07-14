@@ -2,10 +2,11 @@ import Foundation
 
 public struct TmuxClient: Equatable, Sendable {
     public let tty: String
+    public let pid: Int
     public let sessionName: String
 
-    public init(tty: String, sessionName: String) {
-        self.tty = tty; self.sessionName = sessionName
+    public init(tty: String, pid: Int, sessionName: String) {
+        self.tty = tty; self.pid = pid; self.sessionName = sessionName
     }
 }
 
@@ -45,15 +46,15 @@ public enum TmuxMapper {
     }
 
     /// Format strings for the visibility check and jump targeting.
-    public static let clientsFormat = "#{client_tty}\t#{session_name}"
+    public static let clientsFormat = "#{client_tty}\t#{client_pid}\t#{session_name}"
     public static let windowsFormat = "#{session_name}\t#{window_index}\t#{window_active}"
 
-    /// Parses `tmux list-clients -F '#{client_tty}\t#{session_name}'`.
+    /// Parses `tmux list-clients -F '#{client_tty}\t#{client_pid}\t#{session_name}'`.
     public static func parseClients(_ output: String) -> [TmuxClient] {
         output.split(separator: "\n").compactMap { line in
             let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
-            guard parts.count == 2, !parts[0].isEmpty else { return nil }
-            return TmuxClient(tty: parts[0], sessionName: parts[1])
+            guard parts.count == 3, !parts[0].isEmpty, let pid = Int(parts[1]) else { return nil }
+            return TmuxClient(tty: parts[0], pid: pid, sessionName: parts[2])
         }
     }
 

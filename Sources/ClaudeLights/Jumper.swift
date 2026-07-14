@@ -25,23 +25,61 @@ final class Jumper {
             offerToOpenWindow(attachingTo: tmuxSession)
             return
         }
-        var hostTty: String?
+        var host: TmuxClient?
         if let attached = clients.first(where: { $0.sessionName == tmuxSession }) {
-            hostTty = attached.tty
+            host = attached
         } else if let any = clients.first {
             // No client shows this session: retarget one onto it.
             Shell.run(tmuxPath, ["switch-client", "-c", any.tty, "-t", "\(tmuxSession):\(window)"])
-            hostTty = any.tty
+            host = any
         }
 
-        // Focus the exact terminal window/tab hosting that client's tty.
-        // Each focuser matches by tty, so trying both is safe — only the app
-        // actually hosting the tty reports "ok".
-        if let hostTty {
-            if focusITermTab(tty: hostTty) { return }
-            if focusAppleTerminalTab(tty: hostTty) { return }
+        if let host {
+            // VS Code hosts all integrated terminals in one shared pty-host
+            // process, so a tty can't select a window — the workspace folder
+            // (the session's cwd) is the window key instead.
+            if let app = guiApp(abovePid: Int32(host.pid)),
+               app.bundleIdentifier == "com.microsoft.VSCode" {
+                focusVSCodeWindow(cwd: session.cwd, app: app)
+                return
+            }
+            // Focus the exact terminal window/tab hosting that client's tty.
+            // Each focuser matches by tty, so trying both is safe — only the
+            // app actually hosting the tty reports "ok".
+            if focusITermTab(tty: host.tty) { return }
+            if focusAppleTerminalTab(tty: host.tty) { return }
         }
         activateTerminal()
+    }
+
+    /// Walks up the process ancestry until a regular GUI app is found.
+    private func guiApp(abovePid start: Int32) -> NSRunningApplication? {
+        var pid = start
+        for _ in 0..<10 {
+            if let app = NSRunningApplication(processIdentifier: pid),
+               app.activationPolicy == .regular {
+                return app
+            }
+            guard let ppidOut = Shell.run("/bin/ps", ["-o", "ppid=", "-p", String(pid)]),
+                  let ppid = Int32(ppidOut.trimmingCharacters(in: .whitespacesAndNewlines)),
+                  ppid > 1 else { return nil }
+            pid = ppid
+        }
+        return nil
+    }
+
+    /// Focuses the VS Code window whose workspace is the session's cwd; the
+    /// `code` CLI reuses an existing window for a folder it already has open.
+    private func focusVSCodeWindow(cwd: String, app: NSRunningApplication) {
+        let bundledCLI = "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+        if let code = BinaryLocator.locate("code") {
+            Shell.run(code, [cwd])
+        } else if FileManager.default.isExecutableFile(atPath: bundledCLI) {
+            Shell.run(bundledCLI, [cwd])
+        } else {
+            Shell.run("/usr/bin/open", ["-a", "Visual Studio Code", cwd])
+        }
+        app.activate(options: [.activateIgnoringOtherApps])
     }
 
     /// Selects the iTerm2 window + tab + split whose tty hosts the tmux
@@ -148,17 +186,10 @@ final class Jumper {
         if let tmuxPath,
            let out = Shell.run(tmuxPath, ["list-clients", "-F", "#{client_pid}"]) {
             for pidLine in out.split(separator: "\n") {
-                guard var pid = Int32(pidLine.trimmingCharacters(in: .whitespaces)) else { continue }
-                for _ in 0..<10 {
-                    if let app = NSRunningApplication(processIdentifier: pid),
-                       app.activationPolicy == .regular {
-                        app.activate(options: [.activateIgnoringOtherApps])
-                        return
-                    }
-                    guard let ppidOut = Shell.run("/bin/ps", ["-o", "ppid=", "-p", String(pid)]),
-                          let ppid = Int32(ppidOut.trimmingCharacters(in: .whitespacesAndNewlines)),
-                          ppid > 1 else { break }
-                    pid = ppid
+                guard let pid = Int32(pidLine.trimmingCharacters(in: .whitespaces)) else { continue }
+                if let app = guiApp(abovePid: pid) {
+                    app.activate(options: [.activateIgnoringOtherApps])
+                    return
                 }
             }
         }

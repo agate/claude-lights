@@ -28,13 +28,16 @@ final class TmuxMapperTests: XCTestCase {
     }
 
     func testParseClients() {
-        let out = "/dev/ttys002\tmain\n/dev/ttys009\twork session\n"
+        let out = "/dev/ttys002\t501\tmain\n/dev/ttys009\t733\twork session\n"
         let clients = TmuxMapper.parseClients(out)
         XCTAssertEqual(clients.count, 2)
         XCTAssertEqual(clients[0].tty, "/dev/ttys002")
+        XCTAssertEqual(clients[0].pid, 501)
         XCTAssertEqual(clients[0].sessionName, "main")
+        XCTAssertEqual(clients[1].pid, 733)
         XCTAssertEqual(clients[1].sessionName, "work session")
         XCTAssertEqual(TmuxMapper.parseClients("").count, 0)
+        XCTAssertEqual(TmuxMapper.parseClients("/dev/ttys002\tbad\tmain\n").count, 0)
     }
 
     func testParseActiveAttachedWindows() {
