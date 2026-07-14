@@ -47,11 +47,9 @@ struct BarView: View {
     var onHover: (Session, Bool, NSRect) -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ForEach(store.sessions) { session in
-                Circle()
-                    .fill(Color(StatusIcon.color(session.light)))
-                    .frame(width: 12, height: 12)
+                Image(nsImage: StatusIcon.image(for: session.light))
                     .background(HoverReporter { hovering, anchor in
                         onHover(session, hovering, anchor)
                     })

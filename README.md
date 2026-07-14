@@ -1,12 +1,22 @@
 # Claude Lights
 
-A macOS menu bar app that shows every local Claude Code session as a traffic
-light — red means a session is waiting for you, yellow means it is working,
-green means it is idle/done (and dims once you've looked at it). Includes an
-always-on-top floating light bar, one-click jump to the session's tmux
-window, and a notification with sound when a session starts waiting.
+A macOS menu bar app that shows every local Claude Code session as a status
+dot. Each state is encoded twice — a colorblind-safe color **and** a glyph —
+so it reads clearly regardless of color vision:
 
-![Floating light bar — one dot per session: waiting, working, idle (unseen), idle (seen)](assets/screenshot-bar.png)
+| Dot | State |
+|-----|-------|
+| **!** vermillion | Waiting for you (input / permission approval) |
+| **R** amber | Running (working) |
+| **✓** bluish-green | Done — finished, not yet looked at |
+| filled gray | Idle — already seen |
+| hollow gray | Just started, nothing yet |
+
+Includes an always-on-top floating light bar, one-click jump to the
+session's tmux window (iTerm2, Apple Terminal, or VS Code), and a
+notification with sound when a session needs you or finishes.
+
+![Floating light bar — one dot per session: waiting (!), running (R), done (✓), idle seen, just started](assets/screenshot-bar.png)
 
 The bar updates live as sessions change state:
 

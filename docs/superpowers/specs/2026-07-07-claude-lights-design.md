@@ -71,13 +71,17 @@ Unknown values must map to a conservative neutral color, never crash.
 
 ## State model
 
-| Light | Meaning | Source values |
-|-------|---------|---------------|
-| 🔴 Red | Waiting for the user (input / permission) | waiting-like status (verify exact value) |
-| 🟡 Yellow | Working | `status: "busy"` |
-| 🟢 Green | Idle / done, not yet looked at | `status: "idle"`, `state: "done"` |
-| 🟢 Dim green | Idle / done, already seen (desaturated) | green + seen |
-| ⚪ Gray | Unknown / unmappable | anything else |
+Each state is encoded on two independent channels — a colorblind-safe hue
+(Okabe-Ito palette) and a glyph/shape — so no state is distinguishable by
+color alone (a colleague is colorblind).
+
+| Light | Color | Glyph/shape | Meaning | Source values |
+|-------|-------|-------------|---------|---------------|
+| Red | vermillion `#D55E00` | `!` | Waiting for the user (input / permission) | `waiting` |
+| Yellow | amber `#E69F00` | `R` | Working | `busy`, `shell`, `working`, `running` |
+| Green | bluish-green `#009E73` | `✓` | Idle / done, not yet looked at | `idle`, `state: done` |
+| Dim green | gray, filled | (none) | Idle / done, already seen | green + seen |
+| Gray | gray, hollow ring | (none) | Brand-new (no transcript) / unknown | anything else |
 
 Sort order everywhere: red → yellow → green → dim green (red always first).
 
