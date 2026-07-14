@@ -51,7 +51,7 @@ enum StatusIcon {
     }
 
     static func image(for light: LightState, diameter: CGFloat = 14,
-                      margin: CGFloat = 2) -> NSImage {
+                      margin: CGFloat = 2, markRotation: CGFloat = 0) -> NSImage {
         let size = NSSize(width: diameter + margin * 2, height: diameter + margin * 2)
         let image = NSImage(size: size, flipped: false) { rect in
             let circle = rect.insetBy(dx: margin, dy: margin)
@@ -66,8 +66,19 @@ enum StatusIcon {
             }
             if let mark = mark(for: light, diameter: diameter) {
                 let m = mark.size
-                mark.draw(in: NSRect(x: circle.midX - m.width / 2, y: circle.midY - m.height / 2,
-                                     width: m.width, height: m.height))
+                if markRotation != 0 {
+                    NSGraphicsContext.saveGraphicsState()
+                    let t = NSAffineTransform()
+                    t.translateX(by: circle.midX, yBy: circle.midY)
+                    t.rotate(byDegrees: markRotation)
+                    t.concat()
+                    mark.draw(in: NSRect(x: -m.width / 2, y: -m.height / 2,
+                                         width: m.width, height: m.height))
+                    NSGraphicsContext.restoreGraphicsState()
+                } else {
+                    mark.draw(in: NSRect(x: circle.midX - m.width / 2, y: circle.midY - m.height / 2,
+                                         width: m.width, height: m.height))
+                }
             }
             return true
         }

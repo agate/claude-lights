@@ -9,13 +9,47 @@ final class StatusItemController: NSObject {
 
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private var sessions: [Session] = []
+    private var spinTimer: Timer?
+    private var spinAngle: CGFloat = 0
+    private var aggregate: LightState = .gray
 
     func update(sessions: [Session], error: String?) {
         self.sessions = sessions
-        item.button?.image = StatusIcon.image(for: Aggregate.overall(sessions, hasError: error != nil),
-                                              diameter: 17, margin: 1)
+        aggregate = Aggregate.overall(sessions, hasError: error != nil)
         item.button?.toolTip = "Claude Lights"
         item.menu = buildMenu(error: error)
+        refreshButtonImage()
+        // Spin the menu-bar gear only while the aggregate is running, so the
+        // timer sleeps whenever nothing is working.
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        if aggregate == .yellow && !reduceMotion {
+            startSpinner()
+        } else {
+            stopSpinner()
+        }
+    }
+
+    private func refreshButtonImage() {
+        item.button?.image = StatusIcon.image(for: aggregate, diameter: 17, margin: 1,
+                                              markRotation: spinAngle)
+    }
+
+    private func startSpinner() {
+        guard spinTimer == nil else { return }
+        let timer = Timer(timeInterval: 1.0 / 15.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            self.spinAngle = (self.spinAngle - 24).truncatingRemainder(dividingBy: 360)
+            self.refreshButtonImage()
+        }
+        // .common so it keeps ticking while the menu is open.
+        RunLoop.main.add(timer, forMode: .common)
+        spinTimer = timer
+    }
+
+    private func stopSpinner() {
+        spinTimer?.invalidate()
+        spinTimer = nil
+        if spinAngle != 0 { spinAngle = 0; refreshButtonImage() }
     }
 
     private func buildMenu(error: String?) -> NSMenu {
