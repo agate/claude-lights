@@ -108,20 +108,32 @@ enum StatusIcon {
         full.fill(using: .sourceAtop) // tint whatever was drawn to solid white
         NSGraphicsContext.restoreGraphicsState()
 
-        // Opaque bounding box in pixels (rep coords are top-left origin).
+        // Opaque bounds + centroid in pixels (rep coords are top-left origin).
         var minX = side, minY = side, maxX = -1, maxY = -1
+        var sumX = 0, sumY = 0, count = 0
         for y in 0..<side {
             for x in 0..<side where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.05 {
                 minX = min(minX, x); maxX = max(maxX, x)
                 minY = min(minY, y); maxY = max(maxY, y)
+                sumX += x; sumY += y; count += 1
             }
         }
-        guard maxX >= minX, maxY >= minY,
-              let cg = rep.cgImage?.cropping(to: CGRect(
-                x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)) else { return nil }
+        guard count > 0, maxX >= minX, maxY >= minY else { return nil }
+
+        // Crop symmetrically about the centroid (center of visual mass), so
+        // that centering the returned image optically centers the mark —
+        // e.g. a "!" is bar-heavy, and bbox-centering would ride high.
+        let cx = Int((Double(sumX) / Double(count)).rounded())
+        let cy = Int((Double(sumY) / Double(count)).rounded())
+        let hx = max(cx - minX, maxX - cx)
+        let hy = max(cy - minY, maxY - cy)
+        let cropX = max(0, cx - hx), cropY = max(0, cy - hy)
+        let cropW = min(side - cropX, 2 * hx + 1), cropH = min(side - cropY, 2 * hy + 1)
+        guard let cg = rep.cgImage?.cropping(to: CGRect(x: cropX, y: cropY,
+                                                        width: cropW, height: cropH)) else { return nil }
         // Logical size in points = pixels / scale, so the cropped high-DPI
         // image draws at full resolution.
-        return NSImage(cgImage: cg, size: NSSize(width: CGFloat(maxX - minX + 1) / scale,
-                                                 height: CGFloat(maxY - minY + 1) / scale))
+        return NSImage(cgImage: cg, size: NSSize(width: CGFloat(cropW) / scale,
+                                                 height: CGFloat(cropH) / scale))
     }
 }
