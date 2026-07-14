@@ -13,14 +13,22 @@ enum StatusIcon {
         }
     }
 
-    /// Second encoding channel: a glyph for the states that need attention.
+    /// Second encoding channel: a text glyph for the attention states.
+    /// Running uses a gear symbol instead (see `gearImage`).
     static func glyph(_ light: LightState) -> String? {
         switch light {
         case .red: return "!"
-        case .yellow: return "R"
         case .green: return "✓"
-        case .greenSeen, .gray: return nil
+        case .yellow, .greenSeen, .gray: return nil
         }
+    }
+
+    /// White gear symbol for the running state (static here; the floating
+    /// bar spins it). SF Symbols; nil on the rare system without it.
+    static func gearImage(diameter: CGFloat) -> NSImage? {
+        let config = NSImage.SymbolConfiguration(pointSize: diameter * 0.72, weight: .bold)
+        return NSImage(systemSymbolName: "gearshape.fill", accessibilityDescription: "running")?
+            .withSymbolConfiguration(config)
     }
 
     /// Third channel for the two calm gray states: a brand-new session is a
@@ -40,7 +48,14 @@ enum StatusIcon {
                 color(light).setFill()
                 NSBezierPath(ovalIn: circle).fill()
             }
-            if let glyph = glyph(light) {
+            if light == .yellow, let gear = gearImage(diameter: diameter) {
+                let g = gear.size
+                let box = NSRect(x: circle.midX - g.width / 2, y: circle.midY - g.height / 2,
+                                 width: g.width, height: g.height)
+                gear.draw(in: box)
+                NSColor.white.set()
+                box.fill(using: .sourceAtop) // tint the template gear white
+            } else if let glyph = glyph(light) {
                 let font = NSFont.systemFont(ofSize: diameter * 0.64, weight: .heavy)
                 let text = NSAttributedString(string: glyph, attributes: [
                     .font: font, .foregroundColor: NSColor.white,

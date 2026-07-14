@@ -41,15 +41,56 @@ struct HoverReporter: NSViewRepresentable {
     }
 }
 
+/// A single status dot for the floating bar. Colorblind-safe color plus a
+/// glyph; the running state spins a gear (unless Reduce Motion is on).
+struct DotView: View {
+    let light: LightState
+    private let d: CGFloat = 14
+    @State private var spinning = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack {
+            if StatusIcon.isHollow(light) {
+                Circle().strokeBorder(Color(StatusIcon.color(light)), lineWidth: 1.8)
+            } else {
+                Circle().fill(Color(StatusIcon.color(light)))
+            }
+            switch light {
+            case .yellow:
+                Image(systemName: "gearshape.fill")
+                    .resizable().scaledToFit()
+                    .frame(width: d * 0.66, height: d * 0.66)
+                    .foregroundColor(.white)
+                    .rotationEffect(.degrees(spinning ? 360 : 0))
+                    .onAppear {
+                        guard !reduceMotion else { return }
+                        withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
+                            spinning = true
+                        }
+                    }
+            case .red, .green:
+                Text(StatusIcon.glyph(light) ?? "")
+                    .font(.system(size: d * 0.64, weight: .heavy))
+                    .foregroundColor(.white)
+            case .greenSeen, .gray:
+                EmptyView()
+            }
+        }
+        .frame(width: d, height: d)
+    }
+}
+
 struct BarView: View {
     @ObservedObject var store: SessionStore
     var onJump: (Session) -> Void
     var onHover: (Session, Bool, NSRect) -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 7) {
             ForEach(store.sessions) { session in
-                Image(nsImage: StatusIcon.image(for: session.light))
+                DotView(light: session.light)
+                    .id(session.light) // restart the spin animation on state change
                     .background(HoverReporter { hovering, anchor in
                         onHover(session, hovering, anchor)
                     })

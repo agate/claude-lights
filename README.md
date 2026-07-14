@@ -7,7 +7,7 @@ so it reads clearly regardless of color vision:
 | Dot | State |
 |-----|-------|
 | **!** vermillion | Waiting for you (input / permission approval) |
-| **R** amber | Running (working) |
+| ⚙ amber (spinning) | Running (working) |
 | **✓** bluish-green | Done — finished, not yet looked at |
 | filled gray | Idle — already seen |
 | hollow gray | Just started, nothing yet |

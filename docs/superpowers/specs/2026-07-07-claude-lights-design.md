@@ -78,7 +78,7 @@ color alone (a colleague is colorblind).
 | Light | Color | Glyph/shape | Meaning | Source values |
 |-------|-------|-------------|---------|---------------|
 | Red | vermillion `#D55E00` | `!` | Waiting for the user (input / permission) | `waiting` |
-| Yellow | amber `#E69F00` | `R` | Working | `busy`, `shell`, `working`, `running` |
+| Yellow | amber `#E69F00` | gear (spins in the bar) | Working | `busy`, `shell`, `working`, `running` |
 | Green | bluish-green `#009E73` | `✓` | Idle / done, not yet looked at | `idle`, `state: done` |
 | Dim green | gray, filled | (none) | Idle / done, already seen | green + seen |
 | Gray | gray, hollow ring | (none) | Brand-new (no transcript) / unknown | anything else |
