@@ -91,7 +91,7 @@ status transitions).
 Swift + AppKit/SwiftUI menu bar app (`LSUIElement`, no Dock icon). Four modules:
 
 ### 1. Poller
-- Every 2 s: run `claude agents --json` and `tmux list-panes -a`, join with
+- FSEvents on the registry directory triggers near-instant status polls (0.5 s debounce); a 10 s fallback timer covers tmux visibility sampling, screen following, pid liveness, and age refresh. Each poll: read registry files and `tmux list-panes -a`, join with
   `ps` tty lookups, produce `[Session]` (value-type model).
 - Filters to `kind == "interactive"`.
 - Publishes snapshots to the UI via an observable store; diffs snapshots to

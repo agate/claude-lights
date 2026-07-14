@@ -11,6 +11,7 @@ final class Poller {
     private let tmuxPath = BinaryLocator.locate("tmux")
     private let queue = DispatchQueue(label: "me.honghao.claudelights.poller")
     private var timer: DispatchSourceTimer?
+    private var watcher: RegistryWatcher?
     private var previous: [String: LightState]?
     // Demo/testing hook: pre-seed the seen set so dimmed green is showable.
     private var seen: Set<String> = Set(
@@ -28,12 +29,21 @@ final class Poller {
         }
     }
 
-    func start(interval: TimeInterval = 2.0) {
+    /// Hybrid scheduling: FSEvents on the registry directory delivers status
+    /// changes near-instantly; the slow timer covers everything that has no
+    /// file to watch (tmux visibility sampling, screen following, pid
+    /// liveness, age text refresh).
+    func start(interval: TimeInterval = 10.0) {
         let t = DispatchSource.makeTimerSource(queue: queue)
         t.schedule(deadline: .now(), repeating: interval)
         t.setEventHandler { [weak self] in self?.poll() }
         t.resume()
         timer = t
+
+        watcher = RegistryWatcher(directory: SessionRegistry.defaultDir) { [weak self] in
+            self?.poll()
+        }
+        watcher?.start(on: queue)
     }
 
     /// Keeps the sessionId → AI title cache fresh. First sight of a session

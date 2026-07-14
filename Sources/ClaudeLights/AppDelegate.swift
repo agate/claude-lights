@@ -69,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         poller.start()
 
-        if ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEBUG_LOG"] != nil {
+        if ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEBUG_CLICK"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
                 self?.bar.debugLogHitTest()
                 self?.bar.debugSyntheticClick()
