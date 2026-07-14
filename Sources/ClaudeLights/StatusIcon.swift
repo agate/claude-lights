@@ -75,25 +75,29 @@ enum StatusIcon {
         return image
     }
 
-    /// Draws a white mark into a scratch bitmap, then crops to its opaque
-    /// bounding box so the returned image is exactly the glyph/symbol.
-    private static func tightWhiteMark(canvas: CGFloat,
+    /// Draws a white mark into a supersampled scratch bitmap, crops to its
+    /// opaque bounding box, and returns it as a high-resolution image so it
+    /// stays crisp on Retina. `canvas`/`draw` work in points; the bitmap is
+    /// rendered at `scale`× so measurement and output keep device detail.
+    private static func tightWhiteMark(canvas: CGFloat, scale: CGFloat = 3,
                                        _ draw: (NSRect) -> Void) -> NSImage? {
-        let side = Int(ceil(canvas))
+        let pts = ceil(canvas)
+        let side = Int(pts * scale)
         guard side > 0, let rep = NSBitmapImageRep(
             bitmapDataPlanes: nil, pixelsWide: side, pixelsHigh: side,
             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
+        rep.size = NSSize(width: pts, height: pts) // point size → rep is 'scale'× DPI
 
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-        let full = NSRect(x: 0, y: 0, width: CGFloat(side), height: CGFloat(side))
+        let full = NSRect(x: 0, y: 0, width: pts, height: pts)
         draw(full)
         NSColor.white.set()
         full.fill(using: .sourceAtop) // tint whatever was drawn to solid white
         NSGraphicsContext.restoreGraphicsState()
 
-        // Opaque bounding box (rep coords are top-left origin).
+        // Opaque bounding box in pixels (rep coords are top-left origin).
         var minX = side, minY = side, maxX = -1, maxY = -1
         for y in 0..<side {
             for x in 0..<side where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.05 {
@@ -104,6 +108,9 @@ enum StatusIcon {
         guard maxX >= minX, maxY >= minY,
               let cg = rep.cgImage?.cropping(to: CGRect(
                 x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)) else { return nil }
-        return NSImage(cgImage: cg, size: NSSize(width: maxX - minX + 1, height: maxY - minY + 1))
+        // Logical size in points = pixels / scale, so the cropped high-DPI
+        // image draws at full resolution.
+        return NSImage(cgImage: cg, size: NSSize(width: CGFloat(maxX - minX + 1) / scale,
+                                                 height: CGFloat(maxY - minY + 1) / scale))
     }
 }
