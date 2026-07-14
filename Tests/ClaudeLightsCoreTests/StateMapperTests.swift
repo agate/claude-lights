@@ -11,6 +11,8 @@ final class StateMapperTests: XCTestCase {
 
     func testBusyIsYellow() {
         XCTAssertEqual(StateMapper.light(status: "busy", state: nil), .yellow)
+        // Observed live on 2.1.209: running a shell command reports "shell".
+        XCTAssertEqual(StateMapper.light(status: "shell", state: nil), .yellow)
     }
 
     func testIdleIsGreen() {
