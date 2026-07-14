@@ -61,6 +61,12 @@ final class StatusItemController: NSObject {
         } else if sessions.isEmpty {
             menu.addItem(disabledItem("No Claude sessions"))
         }
+        // Advise when a session runs a Claude Code too old to report the
+        // waiting state — without it, that session can never turn red.
+        if sessions.contains(where: { !SupportedVersion.isSupported($0.version) }) {
+            menu.addItem(disabledItem("⚠ Update Claude Code to ≥ \(SupportedVersion.minimum)"))
+            menu.addItem(disabledItem("    older sessions may not show “waiting”"))
+        }
         for (index, session) in sessions.enumerated() {
             let mi = NSMenuItem(title: session.summaryLine(),
                                 action: #selector(jumpItem(_:)), keyEquivalent: "")

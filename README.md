@@ -25,7 +25,11 @@ The bar updates live as sessions change state:
 ## Requirements
 
 - macOS 13+
-- Claude Code ≥ 2.1.139 (reads `~/.claude/sessions/*.json`)
+- Claude Code ≥ 2.1.207 — reads `~/.claude/sessions/*.json`. This is the
+  first version whose registry reports the `waiting` status that drives the
+  red "needs you" light; on older versions a session awaiting your input
+  never turns red. The app flags any session running an older version in
+  its menu.
 - tmux (optional — needed for click-to-jump)
 
 ## Install

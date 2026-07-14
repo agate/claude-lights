@@ -151,6 +151,11 @@ Swift + AppKit/SwiftUI menu bar app (`LSUIElement`, no Dock icon). Four modules:
 
 - `claude` CLI missing or too old → gray tray icon with an explanatory
   disabled menu item.
+- A session running Claude Code < 2.1.207 (read from the registry's
+  `version` field) → a menu advisory, since that version can't report the
+  `waiting` status the red light depends on. Different sessions may run
+  different versions simultaneously, so this is per-session, not a global
+  block.
 - No sessions → light bar hidden, tray gray.
 - tmux server not running → statuses still shown; jump disabled per session.
 - Malformed/unknown JSON fields → gray state, never crash.

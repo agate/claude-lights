@@ -17,6 +17,8 @@ public struct Session: Identifiable, Equatable, Sendable {
     public let title: String?
     /// True when the session's tmux window is on screen in front of the user.
     public let isOnScreen: Bool
+    /// Claude Code version reported by the session's registry record.
+    public let version: String?
 
     /// Primary display label: the AI title when available, else the project dir name.
     public var displayName: String { title ?? projectName }
@@ -24,7 +26,8 @@ public struct Session: Identifiable, Equatable, Sendable {
     public init(id: String, pid: Int, cwd: String, projectName: String, derivedName: String,
                 light: LightState, statusText: String, statusUpdatedAt: Date?,
                 tmuxSession: String?, tmuxWindow: String?, tmuxPane: String? = nil,
-                waitingFor: String? = nil, title: String? = nil, isOnScreen: Bool = false) {
+                waitingFor: String? = nil, title: String? = nil, isOnScreen: Bool = false,
+                version: String? = nil) {
         self.id = id; self.pid = pid; self.cwd = cwd
         self.projectName = projectName; self.derivedName = derivedName
         self.light = light; self.statusText = statusText
@@ -32,7 +35,7 @@ public struct Session: Identifiable, Equatable, Sendable {
         self.tmuxSession = tmuxSession; self.tmuxWindow = tmuxWindow
         self.tmuxPane = tmuxPane
         self.waitingFor = waitingFor
-        self.title = title; self.isOnScreen = isOnScreen
+        self.title = title; self.isOnScreen = isOnScreen; self.version = version
     }
 }
 
@@ -102,7 +105,8 @@ public enum SessionBuilder {
                     tmuxPane: pane?.paneId,
                     waitingFor: primary.waitingFor,
                     title: titles[id],
-                    isOnScreen: visibleIds.contains(id))
+                    isOnScreen: visibleIds.contains(id),
+                    version: primary.version ?? anchor.version)
             }
             .sorted { lhs, rhs in
                 if lhs.light != rhs.light { return lhs.light < rhs.light }
