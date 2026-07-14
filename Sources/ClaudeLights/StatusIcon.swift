@@ -27,18 +27,28 @@ enum StatusIcon {
     /// bar spins it). SF Symbols; nil on the rare system without it.
     static func gearImage(diameter: CGFloat) -> NSImage? {
         let config = NSImage.SymbolConfiguration(pointSize: diameter * 0.72, weight: .bold)
-        return NSImage(systemSymbolName: "gearshape.fill", accessibilityDescription: "running")?
-            .withSymbolConfiguration(config)
+        guard let gear = NSImage(systemSymbolName: "gearshape.fill", accessibilityDescription: "running")?
+            .withSymbolConfiguration(config) else { return nil }
+        // Tint the gear white inside its own layer, so compositing it later
+        // never bleeds onto the colored disc behind it.
+        let white = NSImage(size: gear.size, flipped: false) { rect in
+            gear.draw(in: rect)
+            NSColor.white.set()
+            rect.fill(using: .sourceAtop)
+            return true
+        }
+        return white
     }
 
     /// Third channel for the two calm gray states: a brand-new session is a
     /// hollow ring, an already-seen idle session is a filled disc.
     static func isHollow(_ light: LightState) -> Bool { light == .gray }
 
-    static func image(for light: LightState, diameter: CGFloat = 14) -> NSImage {
-        let size = NSSize(width: diameter + 4, height: diameter + 4)
+    static func image(for light: LightState, diameter: CGFloat = 14,
+                      margin: CGFloat = 2) -> NSImage {
+        let size = NSSize(width: diameter + margin * 2, height: diameter + margin * 2)
         let image = NSImage(size: size, flipped: false) { rect in
-            let circle = rect.insetBy(dx: 2, dy: 2)
+            let circle = rect.insetBy(dx: margin, dy: margin)
             if isHollow(light) {
                 let path = NSBezierPath(ovalIn: circle.insetBy(dx: 1, dy: 1))
                 path.lineWidth = 1.8
@@ -52,9 +62,7 @@ enum StatusIcon {
                 let g = gear.size
                 let box = NSRect(x: circle.midX - g.width / 2, y: circle.midY - g.height / 2,
                                  width: g.width, height: g.height)
-                gear.draw(in: box)
-                NSColor.white.set()
-                box.fill(using: .sourceAtop) // tint the template gear white
+                gear.draw(in: box) // already tinted white in its own layer
             } else if let glyph = glyph(light) {
                 let font = NSFont.systemFont(ofSize: diameter * 0.64, weight: .heavy)
                 let text = NSAttributedString(string: glyph, attributes: [

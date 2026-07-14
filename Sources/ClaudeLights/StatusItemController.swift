@@ -5,13 +5,15 @@ import ClaudeLightsCore
 final class StatusItemController: NSObject {
     var onJump: ((Session) -> Void)?
     var onToggleBar: (() -> Void)?
+    var isBarShown: () -> Bool = { true }
 
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private var sessions: [Session] = []
 
     func update(sessions: [Session], error: String?) {
         self.sessions = sessions
-        item.button?.image = StatusIcon.image(for: Aggregate.overall(sessions, hasError: error != nil), diameter: 12)
+        item.button?.image = StatusIcon.image(for: Aggregate.overall(sessions, hasError: error != nil),
+                                              diameter: 17, margin: 1)
         item.button?.toolTip = "Claude Lights"
         item.menu = buildMenu(error: error)
     }
@@ -34,8 +36,9 @@ final class StatusItemController: NSObject {
         }
         menu.addItem(.separator())
 
-        let toggle = NSMenuItem(title: "Show/Hide Light Bar", action: #selector(toggleBar), keyEquivalent: "b")
+        let toggle = NSMenuItem(title: "Show Light Bar", action: #selector(toggleBar), keyEquivalent: "b")
         toggle.target = self
+        toggle.state = isBarShown() ? .on : .off
         menu.addItem(toggle)
 
         let sounds = NSMenuItem(title: "Notification Sounds", action: #selector(toggleSounds), keyEquivalent: "")

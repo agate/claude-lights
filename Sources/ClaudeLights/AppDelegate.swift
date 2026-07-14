@@ -18,7 +18,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusController.onJump = { [weak self] session in
             self?.jump(to: session)
         }
-        statusController.onToggleBar = { [weak self] in self?.bar.toggle() }
+        statusController.onToggleBar = { [weak self] in
+            guard let self else { return }
+            self.bar.toggle()
+            // Rebuild the menu so the checkmark reflects the new state at once.
+            self.statusController.update(sessions: self.store.sessions, error: self.store.errorText)
+        }
+        statusController.isBarShown = { [weak self] in self?.bar.isShown ?? true }
 
         notifier.setup()
         notifier.onJump = { [weak self] sessionId in

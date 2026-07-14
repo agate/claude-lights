@@ -316,6 +316,10 @@ final class FloatingBar: NSObject, NSWindowDelegate {
         }
     }
 
+    /// Whether the user wants the bar shown (independent of auto-hide when
+    /// there are no sessions).
+    var isShown: Bool { !manuallyHidden }
+
     func toggle() {
         manuallyHidden.toggle()
         UserDefaults.standard.set(manuallyHidden, forKey: FloatingBar.hiddenKey)
