@@ -28,7 +28,7 @@ enum StatusIcon {
     /// Per-glyph optical nudge (points, downward positive). The checkmark
     /// reads a touch high when mass-centered, so it is dropped slightly.
     static func markNudgeDown(_ light: LightState, diameter: CGFloat) -> CGFloat {
-        light == .green ? diameter * 0.08 : 0
+        light == .green ? diameter * 0.04 : 0
     }
 
     /// The white mark drawn on the disc (gear for running, glyph otherwise),
