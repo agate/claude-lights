@@ -36,9 +36,11 @@ final class StatusItemController: NSObject {
 
     private func startSpinner() {
         guard spinTimer == nil else { return }
+        // Match the floating bar: 360° every 2 s → 180°/s. At 15 fps that is
+        // 12° per tick.
         let timer = Timer(timeInterval: 1.0 / 15.0, repeats: true) { [weak self] _ in
             guard let self else { return }
-            self.spinAngle = (self.spinAngle - 24).truncatingRemainder(dividingBy: 360)
+            self.spinAngle = (self.spinAngle - 12).truncatingRemainder(dividingBy: 360)
             self.refreshButtonImage()
         }
         // .common so it keeps ticking while the menu is open.
