@@ -58,6 +58,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.notifier.notify(session, description: description)
             }
         }
+        poller.onNewlyDone = { [weak self] sessions in
+            for session in sessions {
+                // The last assistant message is the natural completion summary.
+                let lines = TranscriptReader.tailLines(
+                    of: TranscriptReader.transcriptURL(cwd: session.cwd, sessionId: session.id))
+                let description = TranscriptReader.waitingDescription(fromJSONLines: lines)
+                self?.notifier.notifyDone(session, description: description)
+            }
+        }
         poller.start()
 
         if ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEBUG_LOG"] != nil {

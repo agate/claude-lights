@@ -4,6 +4,7 @@ import ClaudeLightsCore
 final class Poller {
     var onSnapshot: (([Session], String?) -> Void)?
     var onNewlyRed: (([Session]) -> Void)?
+    var onNewlyDone: (([Session]) -> Void)?
     /// Injected by the app: whether a known terminal app is frontmost.
     var isTerminalFrontmost: () -> Bool = { true }
 
@@ -104,14 +105,25 @@ final class Poller {
         seen = SeenTracker.update(seen: seen, greens: greens, visible: visible, all: all)
         refreshTitles(records: records, all: all)
 
+        // Sessions with no transcript yet (still starting, nothing said).
+        var newIds = Set<String>()
+        for record in records where record.kind == "interactive" {
+            guard let cwd = record.cwd, let id = record.sessionId else { continue }
+            let url = TranscriptReader.transcriptURL(cwd: cwd, sessionId: id)
+            if !FileManager.default.fileExists(atPath: url.path) { newIds.insert(id) }
+        }
+
         let sessions = SessionBuilder.build(records: records, pidTtys: pidTtys, panes: panes,
-                                            seenIds: seen, titles: titles, visibleIds: visible)
+                                            seenIds: seen, titles: titles, visibleIds: visible,
+                                            newIds: newIds)
         let newlyRed = TransitionDetector.newlyRed(previous: previous, current: sessions)
+        let newlyDone = TransitionDetector.newlyDone(previous: previous, current: sessions)
         previous = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0.light) })
 
         DispatchQueue.main.async { [weak self] in
             self?.onSnapshot?(sessions, error)
             if !newlyRed.isEmpty { self?.onNewlyRed?(newlyRed) }
+            if !newlyDone.isEmpty { self?.onNewlyDone?(newlyDone) }
         }
     }
 }

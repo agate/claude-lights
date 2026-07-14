@@ -60,7 +60,8 @@ public enum SessionBuilder {
                              panes: [TmuxPane],
                              seenIds: Set<String> = [],
                              titles: [String: String] = [:],
-                             visibleIds: Set<String> = []) -> [Session] {
+                             visibleIds: Set<String> = [],
+                             newIds: Set<String> = []) -> [Session] {
         records
             .filter { $0.kind == "interactive" }
             .compactMap { record -> Session? in
@@ -68,6 +69,9 @@ public enum SessionBuilder {
                 let id = record.sessionId ?? String(pid)
                 var light = StateMapper.light(status: record.status, state: record.state)
                 if light == .green, seenIds.contains(id) { light = .greenSeen }
+                // A session with no transcript yet has nothing to report:
+                // gray until the first conversation exists.
+                if newIds.contains(id) { light = .gray }
                 let pane = TmuxMapper.target(forPid: pid, pidTtys: pidTtys, panes: panes)
                 return Session(
                     id: id,
@@ -76,7 +80,7 @@ public enum SessionBuilder {
                     projectName: (cwd as NSString).lastPathComponent,
                     derivedName: record.name ?? "",
                     light: light,
-                    statusText: label(for: light),
+                    statusText: newIds.contains(id) ? "Starting" : label(for: light),
                     statusUpdatedAt: record.statusUpdatedAt.map { Date(timeIntervalSince1970: $0 / 1000) },
                     tmuxSession: pane?.sessionName,
                     tmuxWindow: pane?.windowIndex,

@@ -28,4 +28,20 @@ final class TransitionDetectorTests: XCTestCase {
     func testNonRedNeverNotifies() {
         XCTAssertEqual(TransitionDetector.newlyRed(previous: ["a": .red], current: [s("a", .green)]), [])
     }
+
+    func testWorkFinishedNotifies() {
+        let out = TransitionDetector.newlyDone(previous: ["a": .yellow], current: [s("a", .green)])
+        XCTAssertEqual(out.map(\.id), ["a"])
+        // Red → green (answered elsewhere, then finished) also counts.
+        XCTAssertEqual(TransitionDetector.newlyDone(previous: ["a": .red],
+                                                    current: [s("a", .greenSeen)]).map(\.id), ["a"])
+    }
+
+    func testDoneDoesNotFireForNewOrUnchangedSessions() {
+        XCTAssertEqual(TransitionDetector.newlyDone(previous: nil, current: [s("a", .green)]), [])
+        XCTAssertEqual(TransitionDetector.newlyDone(previous: [:], current: [s("a", .green)]), [])
+        XCTAssertEqual(TransitionDetector.newlyDone(previous: ["a": .green], current: [s("a", .greenSeen)]), [])
+        XCTAssertEqual(TransitionDetector.newlyDone(previous: ["a": .gray], current: [s("a", .green)]), [])
+        XCTAssertEqual(TransitionDetector.newlyDone(previous: ["a": .yellow], current: [s("a", .red)]), [])
+    }
 }

@@ -79,6 +79,19 @@ final class SessionBuilderTests: XCTestCase {
                        "Self-learn Swift programming — Working · 2m ago · not in tmux")
     }
 
+    func testBrandNewSessionsShowGray() {
+        let records = [
+            makeRecord(pid: 1, cwd: "/Users/dev/alpha", status: "busy"),
+            makeRecord(pid: 2, cwd: "/Users/dev/beta", status: "idle"),
+        ]
+        // s1 has no transcript yet (still starting up): gray regardless of status.
+        let sessions = SessionBuilder.build(records: records, pidTtys: [:], panes: [],
+                                            newIds: ["s1"])
+        XCTAssertEqual(sessions.map(\.id), ["s2", "s1"]) // gray sorts last
+        XCTAssertEqual(sessions.map(\.light), [.green, .gray])
+        XCTAssertEqual(sessions[1].statusText, "Starting")
+    }
+
     func testSeenGreenGetsDimmedLightAndSortsAfterUnseen() {
         let records = [
             makeRecord(pid: 1, cwd: "/Users/dev/alpha", status: "idle"),

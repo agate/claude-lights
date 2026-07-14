@@ -38,6 +38,11 @@ final class StatusItemController: NSObject {
         toggle.target = self
         menu.addItem(toggle)
 
+        let sounds = NSMenuItem(title: "Notification Sounds", action: #selector(toggleSounds), keyEquivalent: "")
+        sounds.target = self
+        sounds.state = Notifier.soundsEnabled ? .on : .off
+        menu.addItem(sounds)
+
         let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
         if Bundle.main.bundleIdentifier != nil {
             login.target = self
@@ -62,6 +67,8 @@ final class StatusItemController: NSObject {
     }
 
     @objc private func toggleBar() { onToggleBar?() }
+
+    @objc private func toggleSounds() { Notifier.soundsEnabled.toggle() }
 
     /// Demo/testing hook: pops the tray menu open as if clicked.
     func openMenu() { item.button?.performClick(nil) }
