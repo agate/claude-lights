@@ -72,7 +72,9 @@ final class Poller {
         }
         let records = SessionRegistry.load()
 
-        let pids = records.compactMap { $0.kind == "interactive" ? $0.pid : nil }
+        let pids = records.compactMap {
+            $0.kind == "interactive" || $0.kind == "bg" ? $0.pid : nil
+        }
         var pidTtys: [Int: String] = [:]
         if !pids.isEmpty,
            let psOut = Shell.run("/bin/ps", ["-o", "pid=,tty=", "-p",
@@ -97,24 +99,6 @@ final class Poller {
             activeWindows = TmuxMapper.parseActiveAttachedWindows(attachedSessions: attached,
                                                                   windowsOutput: windowsOut)
         }
-        var greens = Set<String>(), visible = Set<String>(), all = Set<String>()
-        let terminalFrontmost = isTerminalFrontmost()
-        for record in records where record.kind == "interactive" {
-            guard let pid = record.pid else { continue }
-            let id = record.sessionId ?? String(pid)
-            all.insert(id)
-            if terminalFrontmost,
-               let pane = TmuxMapper.target(forPid: pid, pidTtys: pidTtys, panes: panes),
-               activeWindows.contains(pane.sessionName + ":" + pane.windowIndex) {
-                visible.insert(id)
-            }
-            if StateMapper.light(status: record.status, state: record.state) == .green {
-                greens.insert(id)
-            }
-        }
-        seen = SeenTracker.update(seen: seen, greens: greens, visible: visible, all: all)
-        refreshTitles(records: records, all: all)
-
         // Sessions with no transcript yet (still starting, nothing said).
         var newIds = Set<String>()
         for record in records where record.kind == "interactive" {
@@ -122,6 +106,24 @@ final class Poller {
             let url = TranscriptReader.transcriptURL(cwd: cwd, sessionId: id)
             if !FileManager.default.fileExists(atPath: url.path) { newIds.insert(id) }
         }
+
+        // First pass merges twin records (bg + interactive) per sessionId,
+        // so visibility and seen sampling use the merged truth.
+        let base = SessionBuilder.build(records: records, pidTtys: pidTtys, panes: panes,
+                                        newIds: newIds)
+        let all = Set(base.map(\.id))
+        let greens = Set(base.filter { $0.light == .green }.map(\.id))
+        var visible = Set<String>()
+        if isTerminalFrontmost() {
+            for session in base {
+                if let tmuxSession = session.tmuxSession, let window = session.tmuxWindow,
+                   activeWindows.contains(tmuxSession + ":" + window) {
+                    visible.insert(session.id)
+                }
+            }
+        }
+        seen = SeenTracker.update(seen: seen, greens: greens, visible: visible, all: all)
+        refreshTitles(records: records, all: all)
 
         let sessions = SessionBuilder.build(records: records, pidTtys: pidTtys, panes: panes,
                                             seenIds: seen, titles: titles, visibleIds: visible,

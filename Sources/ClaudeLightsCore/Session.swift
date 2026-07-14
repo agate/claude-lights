@@ -62,30 +62,45 @@ public enum SessionBuilder {
                              titles: [String: String] = [:],
                              visibleIds: Set<String> = [],
                              newIds: Set<String> = []) -> [Session] {
-        records
-            .filter { $0.kind == "interactive" }
-            .compactMap { record -> Session? in
-                guard let pid = record.pid, let cwd = record.cwd else { return nil }
-                let id = record.sessionId ?? String(pid)
-                var light = StateMapper.light(status: record.status, state: record.state)
+        // A session moved to the background keeps a stale interactive record
+        // alongside a live bg record under the same sessionId: group them.
+        var groups: [String: [AgentRecord]] = [:]
+        for record in records where record.kind == "interactive" || record.kind == "bg" {
+            guard let id = record.sessionId ?? record.pid.map(String.init) else { continue }
+            groups[id, default: []].append(record)
+        }
+        return groups
+            .compactMap { id, group -> Session? in
+                // Pure background jobs have no terminal to jump to: hidden.
+                guard let anchor = group.first(where: { $0.kind == "interactive" }) else { return nil }
+                guard let pid = anchor.pid, let cwd = anchor.cwd else { return nil }
+                // The freshest record carries the live status.
+                let primary = group.max {
+                    ($0.statusUpdatedAt ?? 0) < ($1.statusUpdatedAt ?? 0)
+                } ?? anchor
+                var light = StateMapper.light(status: primary.status, state: primary.state)
                 if light == .green, seenIds.contains(id) { light = .greenSeen }
                 // A session with no transcript yet has nothing to report:
                 // gray until the first conversation exists.
                 if newIds.contains(id) { light = .gray }
-                let pane = TmuxMapper.target(forPid: pid, pidTtys: pidTtys, panes: panes)
+                // Any record of the group that maps to a tmux pane provides
+                // the jump target (usually the interactive one's tty).
+                let pane = group.lazy.compactMap { record in
+                    record.pid.flatMap { TmuxMapper.target(forPid: $0, pidTtys: pidTtys, panes: panes) }
+                }.first
                 return Session(
                     id: id,
                     pid: pid,
                     cwd: cwd,
                     projectName: (cwd as NSString).lastPathComponent,
-                    derivedName: record.name ?? "",
+                    derivedName: anchor.name ?? "",
                     light: light,
                     statusText: newIds.contains(id) ? "Starting" : label(for: light),
-                    statusUpdatedAt: record.statusUpdatedAt.map { Date(timeIntervalSince1970: $0 / 1000) },
+                    statusUpdatedAt: primary.statusUpdatedAt.map { Date(timeIntervalSince1970: $0 / 1000) },
                     tmuxSession: pane?.sessionName,
                     tmuxWindow: pane?.windowIndex,
                     tmuxPane: pane?.paneId,
-                    waitingFor: record.waitingFor,
+                    waitingFor: primary.waitingFor,
                     title: titles[id],
                     isOnScreen: visibleIds.contains(id))
             }

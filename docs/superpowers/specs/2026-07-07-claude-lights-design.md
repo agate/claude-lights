@@ -23,7 +23,11 @@ which proved that Claude Code publishes session state with no hooks required.
 
 ## Non-goals (v1)
 
-- Showing `kind: "background"` agents (no terminal to jump to).
+- Showing standalone `kind: "bg"` jobs (no terminal to jump to). But note:
+  a session moved to the background keeps a stale interactive registry
+  record alongside a live bg record under the same sessionId — those twins
+  are merged (freshest record wins the status, the interactive one's tty
+  provides the jump target), otherwise the light freezes on the stale twin.
 - Live screen previews of sessions.
 - Controlling sessions (sending input, killing) from the app.
 - Linux/Windows support.

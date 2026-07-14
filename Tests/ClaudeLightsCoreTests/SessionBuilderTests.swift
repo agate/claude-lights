@@ -79,6 +79,32 @@ final class SessionBuilderTests: XCTestCase {
                        "Self-learn Swift programming — Working · 2m ago · not in tmux")
     }
 
+    func testBackgroundTwinDrivesStateOfItsInteractiveSession() {
+        // A session moved to background keeps a stale interactive record and
+        // a live bg record under the same sessionId. Freshest record wins the
+        // status; the interactive record provides the tmux jump target.
+        let stale = AgentRecord(pid: 10, cwd: "/Users/dev/app", kind: "interactive",
+                                sessionId: "s", name: "app-1a", status: "idle",
+                                statusUpdatedAt: 1_000_000)
+        let live = AgentRecord(pid: 20, cwd: "/Users/dev/app", kind: "bg",
+                               sessionId: "s", name: "My task", status: "busy",
+                               statusUpdatedAt: 2_000_000)
+        let panes = [TmuxPane(tty: "/dev/ttys001", sessionName: "main", windowIndex: "1", paneId: "%3")]
+        let sessions = SessionBuilder.build(records: [stale, live],
+                                            pidTtys: [10: "/dev/ttys001"], panes: panes)
+
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].light, .yellow)
+        XCTAssertEqual(sessions[0].tmuxSession, "main")
+        XCTAssertEqual(sessions[0].statusUpdatedAt, Date(timeIntervalSince1970: 2_000))
+    }
+
+    func testPureBackgroundJobsStayHidden() {
+        let job = AgentRecord(pid: 30, cwd: "/tmp", kind: "bg", sessionId: "j",
+                              name: "cron thing", status: "busy", statusUpdatedAt: 1000)
+        XCTAssertEqual(SessionBuilder.build(records: [job], pidTtys: [:], panes: []).count, 0)
+    }
+
     func testBrandNewSessionsShowGray() {
         let records = [
             makeRecord(pid: 1, cwd: "/Users/dev/alpha", status: "busy"),
