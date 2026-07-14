@@ -13,8 +13,6 @@ enum StatusIcon {
         }
     }
 
-    /// Second encoding channel: a text glyph for the attention states.
-    /// Running uses a gear symbol instead (see `gearImage`).
     static func glyph(_ light: LightState) -> String? {
         switch light {
         case .red: return "!"
@@ -23,26 +21,34 @@ enum StatusIcon {
         }
     }
 
-    /// White gear symbol for the running state (static here; the floating
-    /// bar spins it). SF Symbols; nil on the rare system without it.
-    static func gearImage(diameter: CGFloat) -> NSImage? {
-        let config = NSImage.SymbolConfiguration(pointSize: diameter * 0.72, weight: .bold)
-        guard let gear = NSImage(systemSymbolName: "gearshape.fill", accessibilityDescription: "running")?
-            .withSymbolConfiguration(config) else { return nil }
-        // Tint the gear white inside its own layer, so compositing it later
-        // never bleeds onto the colored disc behind it.
-        let white = NSImage(size: gear.size, flipped: false) { rect in
-            gear.draw(in: rect)
-            NSColor.white.set()
-            rect.fill(using: .sourceAtop)
-            return true
-        }
-        return white
-    }
-
     /// Third channel for the two calm gray states: a brand-new session is a
     /// hollow ring, an already-seen idle session is a filled disc.
     static func isHollow(_ light: LightState) -> Bool { light == .gray }
+
+    /// The white mark drawn on the disc (gear for running, glyph otherwise),
+    /// cropped tight to its visible pixels so callers can center it exactly.
+    /// The floating bar also rotates this image for the running animation.
+    static func mark(for light: LightState, diameter: CGFloat) -> NSImage? {
+        if light == .yellow {
+            let config = NSImage.SymbolConfiguration(pointSize: diameter * 0.72, weight: .bold)
+            guard let gear = NSImage(systemSymbolName: "gearshape.fill",
+                                     accessibilityDescription: "running")?
+                .withSymbolConfiguration(config) else { return nil }
+            return tightWhiteMark(canvas: gear.size.width + 6) { rect in
+                let g = gear.size
+                gear.draw(in: NSRect(x: rect.midX - g.width / 2, y: rect.midY - g.height / 2,
+                                     width: g.width, height: g.height))
+            }
+        }
+        guard let glyph = glyph(light) else { return nil }
+        let font = NSFont.systemFont(ofSize: diameter * 0.68, weight: .heavy)
+        let text = NSAttributedString(string: glyph,
+                                      attributes: [.font: font, .foregroundColor: NSColor.white])
+        let sz = text.size()
+        return tightWhiteMark(canvas: max(sz.width, sz.height) + 6) { rect in
+            text.draw(at: NSPoint(x: rect.midX - sz.width / 2, y: rect.midY - sz.height / 2))
+        }
+    }
 
     static func image(for light: LightState, diameter: CGFloat = 14,
                       margin: CGFloat = 2) -> NSImage {
@@ -58,23 +64,46 @@ enum StatusIcon {
                 color(light).setFill()
                 NSBezierPath(ovalIn: circle).fill()
             }
-            if light == .yellow, let gear = gearImage(diameter: diameter) {
-                let g = gear.size
-                let box = NSRect(x: circle.midX - g.width / 2, y: circle.midY - g.height / 2,
-                                 width: g.width, height: g.height)
-                gear.draw(in: box) // already tinted white in its own layer
-            } else if let glyph = glyph(light) {
-                let font = NSFont.systemFont(ofSize: diameter * 0.64, weight: .heavy)
-                let text = NSAttributedString(string: glyph, attributes: [
-                    .font: font, .foregroundColor: NSColor.white,
-                ])
-                let bounds = text.size()
-                text.draw(at: NSPoint(x: circle.midX - bounds.width / 2,
-                                      y: circle.midY - bounds.height / 2))
+            if let mark = mark(for: light, diameter: diameter) {
+                let m = mark.size
+                mark.draw(in: NSRect(x: circle.midX - m.width / 2, y: circle.midY - m.height / 2,
+                                     width: m.width, height: m.height))
             }
             return true
         }
         image.isTemplate = false
         return image
+    }
+
+    /// Draws a white mark into a scratch bitmap, then crops to its opaque
+    /// bounding box so the returned image is exactly the glyph/symbol.
+    private static func tightWhiteMark(canvas: CGFloat,
+                                       _ draw: (NSRect) -> Void) -> NSImage? {
+        let side = Int(ceil(canvas))
+        guard side > 0, let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: side, pixelsHigh: side,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
+
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        let full = NSRect(x: 0, y: 0, width: CGFloat(side), height: CGFloat(side))
+        draw(full)
+        NSColor.white.set()
+        full.fill(using: .sourceAtop) // tint whatever was drawn to solid white
+        NSGraphicsContext.restoreGraphicsState()
+
+        // Opaque bounding box (rep coords are top-left origin).
+        var minX = side, minY = side, maxX = -1, maxY = -1
+        for y in 0..<side {
+            for x in 0..<side where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.05 {
+                minX = min(minX, x); maxX = max(maxX, x)
+                minY = min(minY, y); maxY = max(maxY, y)
+            }
+        }
+        guard maxX >= minX, maxY >= minY,
+              let cg = rep.cgImage?.cropping(to: CGRect(
+                x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)) else { return nil }
+        return NSImage(cgImage: cg, size: NSSize(width: maxX - minX + 1, height: maxY - minY + 1))
     }
 }

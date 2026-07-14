@@ -56,25 +56,17 @@ struct DotView: View {
             } else {
                 Circle().fill(Color(StatusIcon.color(light)))
             }
-            switch light {
-            case .yellow:
-                Image(systemName: "gearshape.fill")
-                    .resizable().scaledToFit()
-                    .frame(width: d * 0.66, height: d * 0.66)
-                    .foregroundColor(.white)
-                    .rotationEffect(.degrees(spinning ? 360 : 0))
+            // Tight-cropped white mark: ZStack centers its true pixels, and
+            // rotating it (running) spins about its own center.
+            if let mark = StatusIcon.mark(for: light, diameter: d) {
+                Image(nsImage: mark)
+                    .rotationEffect(.degrees(light == .yellow && spinning ? 360 : 0))
                     .onAppear {
-                        guard !reduceMotion else { return }
+                        guard light == .yellow, !reduceMotion else { return }
                         withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
                             spinning = true
                         }
                     }
-            case .red, .green:
-                Text(StatusIcon.glyph(light) ?? "")
-                    .font(.system(size: d * 0.64, weight: .heavy))
-                    .foregroundColor(.white)
-            case .greenSeen, .gray:
-                EmptyView()
             }
         }
         .frame(width: d, height: d)
