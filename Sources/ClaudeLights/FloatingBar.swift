@@ -61,6 +61,7 @@ struct DotView: View {
             if let mark = StatusIcon.mark(for: light, diameter: d) {
                 Image(nsImage: mark)
                     .rotationEffect(.degrees(light == .yellow && spinning ? 360 : 0))
+                    .offset(y: StatusIcon.markNudgeDown(light, diameter: d)) // SwiftUI y-down
                     .onAppear {
                         guard light == .yellow, !reduceMotion else { return }
                         withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {

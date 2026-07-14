@@ -25,6 +25,12 @@ enum StatusIcon {
     /// hollow ring, an already-seen idle session is a filled disc.
     static func isHollow(_ light: LightState) -> Bool { light == .gray }
 
+    /// Per-glyph optical nudge (points, downward positive). The checkmark
+    /// reads a touch high when mass-centered, so it is dropped slightly.
+    static func markNudgeDown(_ light: LightState, diameter: CGFloat) -> CGFloat {
+        light == .green ? diameter * 0.08 : 0
+    }
+
     /// The white mark drawn on the disc (gear for running, glyph otherwise),
     /// cropped tight to its visible pixels so callers can center it exactly.
     /// The floating bar also rotates this image for the running animation.
@@ -68,6 +74,7 @@ enum StatusIcon {
             }
             if let mark = mark(for: light, diameter: diameter) {
                 let m = mark.size
+                let nudge = markNudgeDown(light, diameter: diameter) // AppKit y-up: subtract to drop
                 if markRotation != 0 {
                     NSGraphicsContext.saveGraphicsState()
                     let t = NSAffineTransform()
@@ -78,7 +85,8 @@ enum StatusIcon {
                                          width: m.width, height: m.height))
                     NSGraphicsContext.restoreGraphicsState()
                 } else {
-                    mark.draw(in: NSRect(x: circle.midX - m.width / 2, y: circle.midY - m.height / 2,
+                    mark.draw(in: NSRect(x: circle.midX - m.width / 2,
+                                         y: circle.midY - m.height / 2 - nudge,
                                          width: m.width, height: m.height))
                 }
             }
