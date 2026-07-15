@@ -5,8 +5,8 @@ final class Poller {
     var onSnapshot: (([Session], String?) -> Void)?
     var onNewlyRed: (([Session]) -> Void)?
     var onNewlyDone: (([Session]) -> Void)?
-    /// Injected by the app: whether a known terminal app is frontmost.
-    var isTerminalFrontmost: () -> Bool = { true }
+    /// Injected by the app: bundle id of the frontmost terminal, else nil.
+    var frontmostTerminalBundleID: () -> String? = { nil }
 
     private let tmuxPath = BinaryLocator.locate("tmux")
     private let queue = DispatchQueue(label: "me.honghao.claudelights.poller")
@@ -65,6 +65,25 @@ final class Poller {
         titleScanned.formIntersection(all)
     }
 
+    /// tty of the frontmost tab/session of the frontmost terminal, via its
+    /// AppleScript interface. Only iTerm2 and Apple Terminal expose it; other
+    /// terminals (incl. VS Code) return nil, so their sessions are never
+    /// auto-marked seen — the conservative choice.
+    private func focusedTerminalTTY(bundleID: String) -> String? {
+        let script: String
+        switch bundleID {
+        case "com.googlecode.iterm2":
+            script = "tell application \"iTerm2\" to get tty of current session of current window"
+        case "com.apple.Terminal":
+            script = "tell application \"Terminal\" to get tty of selected tab of front window"
+        default:
+            return nil
+        }
+        let out = Shell.run("/usr/bin/osascript", ["-e", script])?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return (out?.isEmpty == false) ? out : nil
+    }
+
     private func poll() {
         var error: String?
         if !FileManager.default.fileExists(atPath: SessionRegistry.defaultDir.path) {
@@ -92,12 +111,25 @@ final class Poller {
         // attached client while a terminal is frontmost is on screen. Used
         // for seen-tracking (greens) and notification silencing (reds).
         var activeWindows = Set<String>()
+        var clients: [TmuxClient] = []
         if let tmuxPath,
            let clientsOut = Shell.run(tmuxPath, ["list-clients", "-F", TmuxMapper.clientsFormat]),
            let windowsOut = Shell.run(tmuxPath, ["list-windows", "-a", "-F", TmuxMapper.windowsFormat]) {
-            let attached = Set(TmuxMapper.parseClients(clientsOut).map(\.sessionName))
-            activeWindows = TmuxMapper.parseActiveAttachedWindows(attachedSessions: attached,
-                                                                  windowsOutput: windowsOut)
+            clients = TmuxMapper.parseClients(clientsOut)
+            activeWindows = TmuxMapper.parseActiveAttachedWindows(
+                attachedSessions: Set(clients.map(\.sessionName)), windowsOutput: windowsOut)
+        }
+        // A window that is the active window of some attached tmux session is
+        // only a *candidate* for being on screen; the user might be on another
+        // tab. Resolve the truly-focused tab (one AppleScript call) only when
+        // such a candidate exists, to avoid polling the terminal needlessly.
+        let hasCandidate = clients.contains { client in
+            activeWindows.contains { $0.hasPrefix(client.sessionName + ":") }
+        }
+        var focusedSessionName: String?
+        if hasCandidate, let bundleID = frontmostTerminalBundleID(),
+           let tty = focusedTerminalTTY(bundleID: bundleID) {
+            focusedSessionName = clients.first { $0.tty == tty }?.sessionName
         }
         // Sessions with no transcript yet (still starting, nothing said).
         var newIds = Set<String>()
@@ -113,11 +145,13 @@ final class Poller {
                                         newIds: newIds)
         let all = Set(base.map(\.id))
         let greens = Set(base.filter { $0.light == .green }.map(\.id))
+        // A session is on screen only when it lives in the tmux session the
+        // user is focused on AND its window is that session's active window.
         var visible = Set<String>()
-        if isTerminalFrontmost() {
+        if let focusedSessionName {
             for session in base {
-                if let tmuxSession = session.tmuxSession, let window = session.tmuxWindow,
-                   activeWindows.contains(tmuxSession + ":" + window) {
+                if session.tmuxSession == focusedSessionName, let window = session.tmuxWindow,
+                   activeWindows.contains(focusedSessionName + ":" + window) {
                     visible.insert(session.id)
                 }
             }

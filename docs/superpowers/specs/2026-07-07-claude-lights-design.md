@@ -86,10 +86,17 @@ color alone (a colleague is colorblind).
 Sort order everywhere: red → yellow → green → dim green (red always first).
 
 **Seen tracking (added 2026-07-07):** a green session counts as "seen" when
-the user jumped to it from the app, or when a poll finds its tmux window is
-the active window of an attached client while a known terminal app is
-frontmost. Turning busy/waiting again resets it to unseen. Seen state is
-in-memory only (app restart shows everything bright green — conservative).
+the user jumped to it from the app, or when it is genuinely on screen — its
+tmux window is the active window of the tmux session attached to the
+*frontmost terminal tab*. That last part matters: a terminal being frontmost
+is not enough, because a background tab's tmux client stays attached and its
+window stays active. The focused tab's tty is read via AppleScript (iTerm2 /
+Apple Terminal); terminals without that interface (incl. VS Code) can't be
+resolved, so their sessions are never auto-seen (conservative: a finished
+session then shows bright green + notifies rather than being silently
+dimmed). The same focused-tab test gates notification silencing. Turning
+busy/waiting again resets to unseen. Seen state is in-memory only (app
+restart shows everything bright green — conservative).
 Idle sessions display an explicit idle duration ("Idle for 12m") in the menu
 and hover tooltip, derived from `statusUpdatedAt` (which only changes on
 status transitions).

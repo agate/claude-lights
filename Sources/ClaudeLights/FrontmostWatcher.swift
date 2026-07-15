@@ -1,13 +1,14 @@
 import AppKit
 
-/// Tracks whether a known terminal app is frontmost, so the poller (on its
-/// own queue) can read it without touching NSWorkspace off the main thread.
+/// Tracks the frontmost app so the poller (on its own queue) can read it
+/// without touching NSWorkspace off the main thread.
 final class FrontmostWatcher {
     static let knownTerminals = ["iTerm2", "Ghostty", "WezTerm", "kitty", "Alacritty", "Terminal",
                                  "Code", "Visual Studio Code"]
 
     private let lock = NSLock()
-    private var value = false
+    private var terminalFrontmost = false
+    private var bundleID: String?
 
     init() {
         update(NSWorkspace.shared.frontmostApplication)
@@ -21,11 +22,17 @@ final class FrontmostWatcher {
 
     var isTerminalFrontmost: Bool {
         lock.lock(); defer { lock.unlock() }
-        return value
+        return terminalFrontmost
+    }
+
+    /// Bundle id of the frontmost app when it is a known terminal, else nil.
+    var frontmostTerminalBundleID: String? {
+        lock.lock(); defer { lock.unlock() }
+        return terminalFrontmost ? bundleID : nil
     }
 
     private func update(_ app: NSRunningApplication?) {
         let isTerminal = app?.localizedName.map { Self.knownTerminals.contains($0) } ?? false
-        lock.lock(); value = isTerminal; lock.unlock()
+        lock.lock(); terminalFrontmost = isTerminal; bundleID = app?.bundleIdentifier; lock.unlock()
     }
 }

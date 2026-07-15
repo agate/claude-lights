@@ -31,8 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let session = self?.store.sessions.first(where: { $0.id == sessionId }) else { return }
             self?.jump(to: session)
         }
-        poller.isTerminalFrontmost = { [weak self] in
-            self?.frontmostWatcher.isTerminalFrontmost ?? false
+        poller.frontmostTerminalBundleID = { [weak self] in
+            self?.frontmostWatcher.frontmostTerminalBundleID
         }
 
         let snapshotDir = ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEMO_SNAPSHOT_DIR"]
