@@ -83,7 +83,11 @@ color alone (a colleague is colorblind).
 | Dim green | gray, filled | (none) | Idle / done, already seen | green + seen |
 | Gray | gray, hollow ring | (none) | Brand-new (no transcript) / unknown | anything else |
 
-Sort order everywhere: red → yellow → green → dim green (red always first).
+Sort order everywhere: **stable, by session launch time** (oldest first,
+ties by id). A session keeps its position for its whole life; only its
+color/glyph changes as it works/waits/finishes. (Earlier builds sorted by
+state — red first — but that made dots jump around on every status change,
+defeating muscle memory. Urgency is still obvious from color + glyph.)
 
 **Seen tracking (added 2026-07-07):** a green session counts as "seen" when
 the user jumped to it from the app, or when it is genuinely on screen — its

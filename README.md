@@ -75,8 +75,9 @@ or VS Code).
 - **Menu bar dot** shows the aggregate state — red if any session needs you,
   else the spinning gear if any is running, else green/gray. Click it for a
   per-session list (project, state, idle duration); click a row to jump.
-- **Floating bar**: one dot per session, sorted so whatever needs you comes
-  first. Hover for details, click to jump, drag to reposition.
+- **Floating bar**: one dot per session in a fixed order (by launch time), so
+  each session keeps its place — only its color changes as it works, waits,
+  or finishes. Hover for details, click to jump, drag to reposition.
   - Drag it near the **top-right corner** to magnetically pin it there; it
     then stays flush with that corner as sessions come and go. Drag it away
     to unpin.

@@ -4,11 +4,12 @@ import XCTest
 final class SessionBuilderTests: XCTestCase {
     func makeRecord(pid: Int, cwd: String, status: String, name: String = "x") -> AgentRecord {
         AgentRecord(pid: pid, cwd: cwd, kind: "interactive", sessionId: "s\(pid)",
-                    name: name, status: status, statusUpdatedAt: 1783872850584,
+                    name: name, status: status, startedAt: Double(pid) * 1000,
+                    statusUpdatedAt: 1783872850584,
                     waitingFor: status == "waiting" ? "permission prompt" : nil)
     }
 
-    func testBuildFiltersSortsAndJoins() {
+    func testBuildFiltersAndJoins() {
         let records = [
             makeRecord(pid: 1, cwd: "/Users/dev/alpha", status: "idle"),
             makeRecord(pid: 2, cwd: "/Users/dev/beta", status: "busy"),
@@ -19,17 +20,34 @@ final class SessionBuilderTests: XCTestCase {
         let panes = [TmuxPane(tty: "/dev/ttys001", sessionName: "main", windowIndex: "3", paneId: "%1")]
         let sessions = SessionBuilder.build(records: records, pidTtys: [2: "/dev/ttys001"], panes: panes)
 
-        XCTAssertEqual(sessions.map(\.light), [.red, .yellow, .green])
-        XCTAssertEqual(sessions.map(\.projectName), ["gamma", "beta", "alpha"])
+        // Stable order by launch time: alpha (s1), beta (s2), gamma (s3).
+        XCTAssertEqual(sessions.map(\.projectName), ["alpha", "beta", "gamma"])
+        XCTAssertEqual(sessions.map(\.light), [.green, .yellow, .red])
         XCTAssertEqual(sessions[1].tmuxSession, "main")
         XCTAssertEqual(sessions[1].tmuxWindow, "3")
         XCTAssertEqual(sessions[1].tmuxPane, "%1")
-        XCTAssertNil(sessions[0].tmuxSession)
-        XCTAssertEqual(sessions[0].statusText, "Waiting for you")
-        XCTAssertEqual(sessions[0].id, "s3")
-        XCTAssertNotNil(sessions[0].statusUpdatedAt)
-        XCTAssertEqual(sessions[0].waitingFor, "permission prompt")
+        // gamma is the waiting one, now last by launch order.
+        XCTAssertEqual(sessions[2].id, "s3")
+        XCTAssertNil(sessions[2].tmuxSession)
+        XCTAssertEqual(sessions[2].statusText, "Waiting for you")
+        XCTAssertEqual(sessions[2].waitingFor, "permission prompt")
         XCTAssertNil(sessions[1].waitingFor)
+        XCTAssertNotNil(sessions[0].statusUpdatedAt)
+    }
+
+    func testOrderIsStableAcrossStatusChanges() {
+        func snapshot(_ betaStatus: String) -> [String] {
+            let records = [
+                makeRecord(pid: 1, cwd: "/Users/dev/alpha", status: "idle"),
+                makeRecord(pid: 2, cwd: "/Users/dev/beta", status: betaStatus),
+                makeRecord(pid: 3, cwd: "/Users/dev/gamma", status: "idle"),
+            ]
+            return SessionBuilder.build(records: records, pidTtys: [:], panes: []).map(\.id)
+        }
+        // beta changing state must not move it: order stays s1, s2, s3.
+        XCTAssertEqual(snapshot("idle"), ["s1", "s2", "s3"])
+        XCTAssertEqual(snapshot("busy"), ["s1", "s2", "s3"])
+        XCTAssertEqual(snapshot("waiting"), ["s1", "s2", "s3"])
     }
 
     func testAgeFormatter() {
@@ -51,13 +69,14 @@ final class SessionBuilderTests: XCTestCase {
         // statusUpdatedAt fixture is 1783872850584 ms; two minutes later:
         let now = Date(timeIntervalSince1970: 1783872850.584 + 120)
 
+        // Stable launch order: alpha (idle), beta (busy), gamma (waiting).
+        // Idle sessions show an explicit idle duration instead of "ago".
         XCTAssertEqual(sessions[0].summaryLine(now: now),
-                       "gamma — Waiting for you (permission prompt) · 2m ago · not in tmux")
+                       "alpha — Idle for 2m · not in tmux")
         XCTAssertEqual(sessions[1].summaryLine(now: now),
                        "beta — Working · 2m ago")
-        // Idle sessions show an explicit idle duration instead of "ago".
         XCTAssertEqual(sessions[2].summaryLine(now: now),
-                       "alpha — Idle for 2m · not in tmux")
+                       "gamma — Waiting for you (permission prompt) · 2m ago · not in tmux")
     }
 
     func testTitleAndVisibilityFlowThrough() {
@@ -68,14 +87,14 @@ final class SessionBuilderTests: XCTestCase {
         let sessions = SessionBuilder.build(records: records, pidTtys: [:], panes: [],
                                             titles: ["s2": "Self-learn Swift programming"],
                                             visibleIds: ["s2"])
-        // sorted red first: s3 (waiting), then s2 (busy)
-        XCTAssertNil(sessions[0].title)
-        XCTAssertFalse(sessions[0].isOnScreen)
-        XCTAssertEqual(sessions[1].title, "Self-learn Swift programming")
-        XCTAssertTrue(sessions[1].isOnScreen)
+        // Stable launch order: s2 (beta) then s3 (gamma).
+        XCTAssertEqual(sessions[0].title, "Self-learn Swift programming")
+        XCTAssertTrue(sessions[0].isOnScreen)
+        XCTAssertNil(sessions[1].title)
+        XCTAssertFalse(sessions[1].isOnScreen)
         // Title becomes the primary display name in the summary line.
         let now = Date(timeIntervalSince1970: 1783872850.584 + 120)
-        XCTAssertEqual(sessions[1].summaryLine(now: now),
+        XCTAssertEqual(sessions[0].summaryLine(now: now),
                        "Self-learn Swift programming — Working · 2m ago · not in tmux")
     }
 
@@ -113,9 +132,9 @@ final class SessionBuilderTests: XCTestCase {
         // s1 has no transcript yet (still starting up): gray regardless of status.
         let sessions = SessionBuilder.build(records: records, pidTtys: [:], panes: [],
                                             newIds: ["s1"])
-        XCTAssertEqual(sessions.map(\.id), ["s2", "s1"]) // gray sorts last
-        XCTAssertEqual(sessions.map(\.light), [.green, .gray])
-        XCTAssertEqual(sessions[1].statusText, "Starting")
+        XCTAssertEqual(sessions.map(\.id), ["s1", "s2"]) // stable launch order
+        XCTAssertEqual(sessions.map(\.light), [.gray, .green])
+        XCTAssertEqual(sessions[0].statusText, "Starting")
     }
 
     func testSeenGreenGetsDimmedLightAndSortsAfterUnseen() {
@@ -125,9 +144,9 @@ final class SessionBuilderTests: XCTestCase {
         ]
         let sessions = SessionBuilder.build(records: records, pidTtys: [:], panes: [],
                                             seenIds: ["s1"])
-        XCTAssertEqual(sessions.map(\.id), ["s2", "s1"]) // unseen green first
-        XCTAssertEqual(sessions.map(\.light), [.green, .greenSeen])
-        XCTAssertEqual(sessions[1].statusText, "Idle")
+        XCTAssertEqual(sessions.map(\.id), ["s1", "s2"]) // stable launch order
+        XCTAssertEqual(sessions.map(\.light), [.greenSeen, .green]) // s1 seen dims
+        XCTAssertEqual(sessions[0].statusText, "Idle")
     }
 
     func testAggregate() {

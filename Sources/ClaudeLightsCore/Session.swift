@@ -19,6 +19,8 @@ public struct Session: Identifiable, Equatable, Sendable {
     public let isOnScreen: Bool
     /// Claude Code version reported by the session's registry record.
     public let version: String?
+    /// Session launch time (ms since epoch); the stable sort key.
+    public let startedAt: Double?
 
     /// Primary display label: the AI title when available, else the project dir name.
     public var displayName: String { title ?? projectName }
@@ -27,7 +29,7 @@ public struct Session: Identifiable, Equatable, Sendable {
                 light: LightState, statusText: String, statusUpdatedAt: Date?,
                 tmuxSession: String?, tmuxWindow: String?, tmuxPane: String? = nil,
                 waitingFor: String? = nil, title: String? = nil, isOnScreen: Bool = false,
-                version: String? = nil) {
+                version: String? = nil, startedAt: Double? = nil) {
         self.id = id; self.pid = pid; self.cwd = cwd
         self.projectName = projectName; self.derivedName = derivedName
         self.light = light; self.statusText = statusText
@@ -36,6 +38,7 @@ public struct Session: Identifiable, Equatable, Sendable {
         self.tmuxPane = tmuxPane
         self.waitingFor = waitingFor
         self.title = title; self.isOnScreen = isOnScreen; self.version = version
+        self.startedAt = startedAt
     }
 }
 
@@ -106,11 +109,16 @@ public enum SessionBuilder {
                     waitingFor: primary.waitingFor,
                     title: titles[id],
                     isOnScreen: visibleIds.contains(id),
-                    version: primary.version ?? anchor.version)
+                    version: primary.version ?? anchor.version,
+                    startedAt: anchor.startedAt)
             }
+            // Stable order by launch time (oldest first), so a session keeps
+            // its position for the whole of its life — only its color changes
+            // as it works/waits/finishes, never its place. Ties break by id.
             .sorted { lhs, rhs in
-                if lhs.light != rhs.light { return lhs.light < rhs.light }
-                return lhs.projectName.localizedCompare(rhs.projectName) == .orderedAscending
+                let l = lhs.startedAt ?? 0, r = rhs.startedAt ?? 0
+                if l != r { return l < r }
+                return lhs.id < rhs.id
             }
     }
 
