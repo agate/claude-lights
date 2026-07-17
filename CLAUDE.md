@@ -42,6 +42,13 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
 - **Seen/on-screen** = the session's tmux window is active in the client on
   the *frontmost tab* (frontmost-tty via AppleScript), not just any terminal
   frontmost. Dot order is **stable by launch time**, never by state.
+- **Auto-update:** `GitHubUpdater` polls `releases/latest` (launch + 24 h),
+  UI talks only to the `UpdaterEngine` protocol (Sparkle-swappable, see
+  docs/superpowers/specs/2026-07-17-auto-update-design.md). Installer picks
+  zip/app by extension, validates bundle id, swaps with rollback. Keep tags
+  `vX.Y.Z` == `CFBundleShortVersionString`, zip via `ditto --keepParent`.
+  E2E test: lower the bundle's version, relaunch with
+  `CLAUDE_LIGHTS_DEMO_AUTOINSTALL=1` — it self-updates from the live release.
 
 ## Open issue
 - App is **ad-hoc signed** (no Team ID). macOS Automation (AppleScript)

@@ -128,6 +128,11 @@ extension AppDelegate: UpdaterEngineDelegate {
             UserDefaults.standard.set(version, forKey: Self.lastNotifiedKey)
             notifier.notifyUpdate(version: version)
         }
+        // Demo hook: install a found update immediately, without a click —
+        // lets the full download→swap→relaunch path run unattended.
+        if ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEMO_AUTOINSTALL"] != nil {
+            updater.installPendingUpdate()
+        }
     }
 
     func updaterIsUpToDate(userInitiated: Bool) {
