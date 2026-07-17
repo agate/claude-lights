@@ -23,12 +23,22 @@ public struct TmuxPane: Equatable, Sendable {
 }
 
 public enum TmuxMapper {
+    /// Field separator for tmux `-F` output. NOT a tab: some tmux builds
+    /// sanitize control chars (incl. tab) in format output to "_", which
+    /// silently broke parsing. A printable multi-char token is left intact
+    /// and never occurs in ttys, session names, window indices, or pane ids.
+    public static let sep = "|CL|"
+
+    private static func fields(_ line: Substring) -> [String] {
+        line.components(separatedBy: sep)
+    }
+
     /// Format string used with `tmux list-panes -a -F`.
-    public static let panesFormat = "#{pane_tty}\t#{session_name}\t#{window_index}\t#{pane_id}"
+    public static let panesFormat = "#{pane_tty}\(sep)#{session_name}\(sep)#{window_index}\(sep)#{pane_id}"
 
     public static func parsePanes(_ output: String) -> [TmuxPane] {
         output.split(separator: "\n").compactMap { line in
-            let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+            let parts = fields(line)
             guard parts.count == 4 else { return nil }
             return TmuxPane(tty: parts[0], sessionName: parts[1], windowIndex: parts[2], paneId: parts[3])
         }
@@ -46,13 +56,12 @@ public enum TmuxMapper {
     }
 
     /// Format strings for the visibility check and jump targeting.
-    public static let clientsFormat = "#{client_tty}\t#{client_pid}\t#{session_name}"
-    public static let windowsFormat = "#{session_name}\t#{window_index}\t#{window_active}"
+    public static let clientsFormat = "#{client_tty}\(sep)#{client_pid}\(sep)#{session_name}"
+    public static let windowsFormat = "#{session_name}\(sep)#{window_index}\(sep)#{window_active}"
 
-    /// Parses `tmux list-clients -F '#{client_tty}\t#{client_pid}\t#{session_name}'`.
     public static func parseClients(_ output: String) -> [TmuxClient] {
         output.split(separator: "\n").compactMap { line in
-            let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+            let parts = fields(line)
             guard parts.count == 3, !parts[0].isEmpty, let pid = Int(parts[1]) else { return nil }
             return TmuxClient(tty: parts[0], pid: pid, sessionName: parts[2])
         }
@@ -66,7 +75,7 @@ public enum TmuxMapper {
         let attached = attachedSessions
         var result = Set<String>()
         for line in windowsOutput.split(separator: "\n") {
-            let parts = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+            let parts = fields(line)
             guard parts.count == 3, parts[2] == "1", attached.contains(parts[0]) else { continue }
             result.insert(parts[0] + ":" + parts[1])
         }

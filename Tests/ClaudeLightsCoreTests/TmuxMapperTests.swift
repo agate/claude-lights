@@ -2,7 +2,8 @@ import XCTest
 @testable import ClaudeLightsCore
 
 final class TmuxMapperTests: XCTestCase {
-    let panesFixture = "/dev/ttys001\tmain\t0\t%0\n/dev/ttys004\tmain\t1\t%1\n/dev/ttys007\twork session\t2\t%5\n"
+    let sep = TmuxMapper.sep
+    lazy var panesFixture = "/dev/ttys001\(sep)main\(sep)0\(sep)%0\n/dev/ttys004\(sep)main\(sep)1\(sep)%1\n/dev/ttys007\(sep)work session\(sep)2\(sep)%5\n"
     let psFixture = "  783 ttys001\n 9895 ??\n12345 ttys007\n"
 
     func testParsePanes() {
@@ -28,7 +29,7 @@ final class TmuxMapperTests: XCTestCase {
     }
 
     func testParseClients() {
-        let out = "/dev/ttys002\t501\tmain\n/dev/ttys009\t733\twork session\n"
+        let out = "/dev/ttys002\(sep)501\(sep)main\n/dev/ttys009\(sep)733\(sep)work session\n"
         let clients = TmuxMapper.parseClients(out)
         XCTAssertEqual(clients.count, 2)
         XCTAssertEqual(clients[0].tty, "/dev/ttys002")
@@ -37,11 +38,11 @@ final class TmuxMapperTests: XCTestCase {
         XCTAssertEqual(clients[1].pid, 733)
         XCTAssertEqual(clients[1].sessionName, "work session")
         XCTAssertEqual(TmuxMapper.parseClients("").count, 0)
-        XCTAssertEqual(TmuxMapper.parseClients("/dev/ttys002\tbad\tmain\n").count, 0)
+        XCTAssertEqual(TmuxMapper.parseClients("/dev/ttys002\(sep)bad\(sep)main\n").count, 0)
     }
 
     func testParseActiveAttachedWindows() {
-        let windows = "main\t0\t0\nmain\t1\t1\nother\t2\t1\n"
+        let windows = "main\(sep)0\(sep)0\nmain\(sep)1\(sep)1\nother\(sep)2\(sep)1\n"
         let active = TmuxMapper.parseActiveAttachedWindows(attachedSessions: ["main"],
                                                            windowsOutput: windows)
         // main:1 is active in an attached session; other:2 is active but detached.
