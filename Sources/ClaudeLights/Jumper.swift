@@ -8,6 +8,9 @@ final class Jumper {
         guard let tmuxPath,
               let tmuxSession = session.tmuxSession,
               let window = session.tmuxWindow else {
+            // Not in tmux: claude runs directly in a terminal tab, so its own
+            // tty is that tab's tty — focus it the same tty-matching way.
+            if let tty = session.tty, focusTab(tty: tty) { return }
             activateTerminal()
             return
         }
@@ -44,12 +47,15 @@ final class Jumper {
                 return
             }
             // Focus the exact terminal window/tab hosting that client's tty.
-            // Each focuser matches by tty, so trying both is safe — only the
-            // app actually hosting the tty reports "ok".
-            if focusITermTab(tty: host.tty) { return }
-            if focusAppleTerminalTab(tty: host.tty) { return }
+            if focusTab(tty: host.tty) { return }
         }
         activateTerminal()
+    }
+
+    /// Focuses the terminal window/tab whose tty matches. Tries iTerm2 then
+    /// Apple Terminal — each matches by tty, so only the real host says "ok".
+    private func focusTab(tty: String) -> Bool {
+        focusITermTab(tty: tty) || focusAppleTerminalTab(tty: tty)
     }
 
     /// Walks up the process ancestry until a regular GUI app is found.

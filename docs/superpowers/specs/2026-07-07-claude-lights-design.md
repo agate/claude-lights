@@ -151,8 +151,11 @@ Swift + AppKit/SwiftUI menu bar app (`LSUIElement`, no Dock icon). Four modules:
        whose workspace has that folder open (window-level only; selecting
        the terminal tab inside would need a companion extension).
      Fallback when nothing matches or automation is denied: activate the
-     hosting terminal app. Sessions with no tmux pane (bare
-     tty) still show status; a click activates the terminal only.
+     hosting terminal app.
+  Sessions with **no tmux** (claude run directly in a terminal tab) jump too:
+  the claude process's own controlling tty *is* that tab's tty, so the same
+  tty-matching focuser selects the right iTerm2 / Apple Terminal tab. Only if
+  that fails does it fall back to merely activating the terminal app.
 - **Notify**: on transition *into* red only (no repeats while red persists):
   `UserNotifications` banner + sound. Title: project name. Body: derived
   name + what it is waiting for, extracted from the transcript tail and

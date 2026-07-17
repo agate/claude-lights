@@ -35,6 +35,23 @@ final class SessionBuilderTests: XCTestCase {
         XCTAssertNotNil(sessions[0].statusUpdatedAt)
     }
 
+    func testSessionCarriesItsOwnTTY() {
+        let records = [
+            makeRecord(pid: 5, cwd: "/Users/dev/bare", status: "busy"), // plain terminal, no tmux
+            makeRecord(pid: 6, cwd: "/Users/dev/intmux", status: "busy"),
+        ]
+        let panes = [TmuxPane(tty: "/dev/ttys009", sessionName: "main", windowIndex: "1", paneId: "%2")]
+        let sessions = SessionBuilder.build(records: records,
+                                            pidTtys: [5: "/dev/ttys004", 6: "/dev/ttys009"],
+                                            panes: panes)
+        // s5: bare terminal — has a tty but no tmux mapping.
+        XCTAssertEqual(sessions[0].tty, "/dev/ttys004")
+        XCTAssertNil(sessions[0].tmuxSession)
+        // s6: in tmux — tty still recorded, plus tmux mapping.
+        XCTAssertEqual(sessions[1].tty, "/dev/ttys009")
+        XCTAssertEqual(sessions[1].tmuxSession, "main")
+    }
+
     func testOrderIsStableAcrossStatusChanges() {
         func snapshot(_ betaStatus: String) -> [String] {
             let records = [
