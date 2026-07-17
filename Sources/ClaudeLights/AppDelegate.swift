@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let jumper = Jumper()
     private let notifier = Notifier()
     private let frontmostWatcher = FrontmostWatcher()
+    private let updater: UpdaterEngine = GitHubUpdater()
     private var statusController: StatusItemController!
     private var bar: FloatingBar!
 
@@ -90,6 +91,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.statusController.openMenu()
             }
         }
+
+        updater.delegate = self
+        statusController.onCheckForUpdates = { [weak self] in
+            self?.updater.checkForUpdates(userInitiated: true)
+        }
+        statusController.onInstallUpdate = { [weak self] in
+            self?.updater.installPendingUpdate()
+        }
+        notifier.onInstallUpdate = { [weak self] in
+            self?.updater.installPendingUpdate()
+        }
+        updater.startPeriodicChecks()
     }
 
     /// Jumping to a session counts as looking at it.
@@ -102,5 +115,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         poller.markSeen(session.id)
         jumper.jump(to: session)
+    }
+}
+
+extension AppDelegate: UpdaterEngineDelegate {
+    private static let lastNotifiedKey = "lastNotifiedUpdateVersion"
+
+    func updaterFoundUpdate(version: String) {
+        statusController.pendingUpdateVersion = version
+        let last = UserDefaults.standard.string(forKey: Self.lastNotifiedKey)
+        if UpdatePolicy.shouldNotify(version: version, lastNotified: last) {
+            UserDefaults.standard.set(version, forKey: Self.lastNotifiedKey)
+            notifier.notifyUpdate(version: version)
+        }
+    }
+
+    func updaterIsUpToDate(userInitiated: Bool) {
+        guard userInitiated else { return }
+        updateAlert(title: "You're up to date",
+                    text: "This is the latest version of Claude Lights.")
+    }
+
+    func updaterFailed(error: String, userInitiated: Bool) {
+        guard userInitiated else { return } // background checks fail silently
+        updateAlert(title: "Update check failed", text: error)
+    }
+
+    func updaterWillInstall() {}
+
+    private func updateAlert(title: String, text: String) {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = text
+        alert.runModal()
     }
 }

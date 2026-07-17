@@ -6,6 +6,10 @@ final class StatusItemController: NSObject {
     var onJump: ((Session) -> Void)?
     var onToggleBar: (() -> Void)?
     var isBarShown: () -> Bool = { true }
+    var onCheckForUpdates: (() -> Void)?
+    var onInstallUpdate: (() -> Void)?
+    /// Set when an update is pending, e.g. "v0.3.0"; menu rebuilds on open.
+    var pendingUpdateVersion: String?
 
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private var sessions: [Session] = []
@@ -63,6 +67,13 @@ final class StatusItemController: NSObject {
     }
 
     private func populate(_ menu: NSMenu, error: String?) {
+        if let v = pendingUpdateVersion {
+            let up = NSMenuItem(title: "⬆︎ Update to \(v)…",
+                                action: #selector(installUpdate), keyEquivalent: "")
+            up.target = self
+            menu.addItem(up)
+            menu.addItem(.separator())
+        }
         if let error {
             menu.addItem(disabledItem(error))
         } else if sessions.isEmpty {
@@ -102,6 +113,13 @@ final class StatusItemController: NSObject {
         } // else: left targetless -> disabled under `swift run` (no bundle)
         menu.addItem(login)
 
+        let check = NSMenuItem(title: "Check for Updates…",
+                               action: #selector(checkForUpdates), keyEquivalent: "")
+        if Bundle.main.bundleIdentifier != nil {
+            check.target = self
+        } // else: left targetless -> disabled under `swift run` (no bundle)
+        menu.addItem(check)
+
         menu.addItem(NSMenuItem(title: "Quit Claude Lights",
                                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
@@ -118,6 +136,10 @@ final class StatusItemController: NSObject {
     }
 
     @objc private func toggleBar() { onToggleBar?() }
+
+    @objc private func installUpdate() { onInstallUpdate?() }
+
+    @objc private func checkForUpdates() { onCheckForUpdates?() }
 
     @objc private func toggleSounds() { Notifier.soundsEnabled.toggle() }
 

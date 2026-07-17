@@ -15,6 +15,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     var onJump: ((String) -> Void)?
+    var onInstallUpdate: (() -> Void)?
     private var authorized = false
     /// UNUserNotificationCenter traps when the process has no bundle (swift run).
     private let hasBundle = Bundle.main.bundleIdentifier != nil
@@ -36,6 +37,18 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     func notifyDone(_ session: Session, description: String?) {
         post(session, title: "\(session.projectName) is done",
              body: description ?? "Finished working")
+    }
+
+    func notifyUpdate(version: String) {
+        guard hasBundle, authorized else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Claude Lights \(version) is available"
+        content.body = "Click to update and relaunch."
+        if Notifier.soundsEnabled { content.sound = .default }
+        content.userInfo = ["update": version]
+        let request = UNNotificationRequest(identifier: "update-\(version)",
+                                            content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
     }
 
     private func post(_ session: Session, title: String, body: String) {
@@ -60,7 +73,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        if let id = response.notification.request.content.userInfo["sessionId"] as? String {
+        if response.notification.request.content.userInfo["update"] != nil {
+            onInstallUpdate?()
+        } else if let id = response.notification.request.content.userInfo["sessionId"] as? String {
             onJump?(id)
         }
         completionHandler()
