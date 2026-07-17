@@ -66,4 +66,29 @@ final class UpdateCheckTests: XCTestCase {
         XCTAssertNil(ReleaseParser.parse("not json"))
         XCTAssertNil(ReleaseParser.parse("{}"))
     }
+
+    // MARK: UpdatePolicy
+
+    func testShouldOfferOnlyWhenNewer() {
+        XCTAssertTrue(UpdatePolicy.shouldOffer(local: "0.2.2", remoteTag: "v0.3.0"))
+        XCTAssertFalse(UpdatePolicy.shouldOffer(local: "0.3.0", remoteTag: "v0.3.0"))
+        XCTAssertFalse(UpdatePolicy.shouldOffer(local: "0.3.1", remoteTag: "v0.3.0")) // no downgrade
+    }
+
+    func testShouldOfferUnparsableIsFalse() {
+        XCTAssertFalse(UpdatePolicy.shouldOffer(local: "0.2.2", remoteTag: "nightly"))
+        XCTAssertFalse(UpdatePolicy.shouldOffer(local: "", remoteTag: "v0.3.0"))
+    }
+
+    func testShouldNotifyOncePerVersion() {
+        XCTAssertTrue(UpdatePolicy.shouldNotify(version: "v0.3.0", lastNotified: nil))
+        XCTAssertTrue(UpdatePolicy.shouldNotify(version: "v0.3.0", lastNotified: "v0.2.9"))
+        XCTAssertFalse(UpdatePolicy.shouldNotify(version: "v0.3.0", lastNotified: "v0.3.0"))
+    }
+
+    func testIsTranslocated() {
+        XCTAssertTrue(UpdatePolicy.isTranslocated(
+            path: "/private/var/folders/ab/xyz/T/AppTranslocation/1234-ABCD/d/ClaudeLights.app"))
+        XCTAssertFalse(UpdatePolicy.isTranslocated(path: "/Applications/ClaudeLights.app"))
+    }
 }

@@ -59,3 +59,22 @@ public enum ReleaseParser {
         return ReleaseInfo(tag: tag, zipURL: zipURL, htmlURL: htmlURL)
     }
 }
+
+public enum UpdatePolicy {
+    /// Offer only strict upgrades; unparsable versions never offer.
+    public static func shouldOffer(local: String, remoteTag: String) -> Bool {
+        guard let l = AppVersion(local), let r = AppVersion(remoteTag) else { return false }
+        return r > l
+    }
+
+    /// One notification per version, ever.
+    public static func shouldNotify(version: String, lastNotified: String?) -> Bool {
+        version != lastNotified
+    }
+
+    /// Gatekeeper app translocation runs the app from a read-only mount;
+    /// self-replacement is impossible there.
+    public static func isTranslocated(path: String) -> Bool {
+        path.contains("/AppTranslocation/")
+    }
+}
