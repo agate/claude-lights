@@ -31,3 +31,31 @@ public struct AppVersion: Comparable {
         !(lhs < rhs) && !(rhs < lhs)
     }
 }
+
+/// The latest published release: its tag, first .zip asset, and web page.
+public struct ReleaseInfo: Equatable {
+    public let tag: String
+    public let zipURL: String
+    public let htmlURL: String
+
+    public init(tag: String, zipURL: String, htmlURL: String) {
+        self.tag = tag
+        self.zipURL = zipURL
+        self.htmlURL = htmlURL
+    }
+}
+
+public enum ReleaseParser {
+    /// Parses a GitHub `releases/latest` response. The zip asset is picked
+    /// by extension, never by name, so app/repo renames don't break updates.
+    public static func parse(_ json: String) -> ReleaseInfo? {
+        guard let data = json.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let tag = obj["tag_name"] as? String,
+              let htmlURL = obj["html_url"] as? String,
+              let assets = obj["assets"] as? [[String: Any]] else { return nil }
+        let zip = assets.first { ($0["name"] as? String)?.lowercased().hasSuffix(".zip") == true }
+        guard let zipURL = zip?["browser_download_url"] as? String else { return nil }
+        return ReleaseInfo(tag: tag, zipURL: zipURL, htmlURL: htmlURL)
+    }
+}
