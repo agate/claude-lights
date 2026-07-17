@@ -9,6 +9,7 @@ final class GitHubUpdater: UpdaterEngine {
     weak var delegate: UpdaterEngineDelegate?
     private(set) var pending: ReleaseInfo?
     private var timer: Timer?
+    private let installer = UpdateInstaller()
 
     private var localVersion: String? {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
@@ -61,8 +62,12 @@ final class GitHubUpdater: UpdaterEngine {
     }
 
     func installPendingUpdate() {
-        guard pending != nil else { return }
+        guard let pending else { return }
         delegate?.updaterWillInstall()
-        // Task "UpdateInstaller" completes this method.
+        installer.install(from: pending) { [weak self] errorMessage in
+            if let errorMessage {
+                self?.delegate?.updaterFailed(error: errorMessage, userInitiated: true)
+            }
+        }
     }
 }
