@@ -2,10 +2,8 @@ import AppKit
 import ClaudeLightsCore
 
 final class Jumper {
-    private let tmuxPath = BinaryLocator.locate("tmux")
-
     func jump(to session: Session) {
-        guard let tmuxPath,
+        guard Tmux.available,
               let tmuxSession = session.tmuxSession,
               let window = session.tmuxWindow else {
             // Not in tmux: claude runs directly in a terminal tab, so its own
@@ -15,14 +13,14 @@ final class Jumper {
             return
         }
         // Make the claude window/pane current inside its tmux session.
-        Shell.run(tmuxPath, ["select-window", "-t", "\(tmuxSession):\(window)"])
+        Tmux.run(["select-window", "-t", "\(tmuxSession):\(window)"])
         if let paneId = session.tmuxPane {
-            Shell.run(tmuxPath, ["select-pane", "-t", paneId])
+            Tmux.run(["select-pane", "-t", paneId])
         }
 
         // Find (or retarget) the client that shows this tmux session.
         let clients = TmuxMapper.parseClients(
-            Shell.run(tmuxPath, ["list-clients", "-F", TmuxMapper.clientsFormat]) ?? "")
+            Tmux.run(["list-clients", "-F", TmuxMapper.clientsFormat]) ?? "")
         guard !clients.isEmpty else {
             // Every terminal window is gone: offer to open one attached here.
             offerToOpenWindow(attachingTo: tmuxSession)
@@ -33,7 +31,7 @@ final class Jumper {
             host = attached
         } else if let any = clients.first {
             // No client shows this session: retarget one onto it.
-            Shell.run(tmuxPath, ["switch-client", "-c", any.tty, "-t", "\(tmuxSession):\(window)"])
+            Tmux.run(["switch-client", "-c", any.tty, "-t", "\(tmuxSession):\(window)"])
             host = any
         }
 
@@ -143,7 +141,7 @@ final class Jumper {
     /// No tmux client anywhere (all terminal windows closed). Ask, then open
     /// a fresh terminal window attached to the target session.
     private func offerToOpenWindow(attachingTo session: String) {
-        guard let tmuxPath, let bundleId = preferredTerminalBundleId() else { return }
+        guard let tmuxPath = Tmux.path, let bundleId = preferredTerminalBundleId() else { return }
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = "No terminal window is attached to tmux"
@@ -189,8 +187,7 @@ final class Jumper {
     /// Finds the GUI app hosting the attached tmux client by walking up its
     /// process ancestry; falls back to well-known terminal apps.
     private func activateTerminal() {
-        if let tmuxPath,
-           let out = Shell.run(tmuxPath, ["list-clients", "-F", "#{client_pid}"]) {
+        if let out = Tmux.run(["list-clients", "-F", "#{client_pid}"]) {
             for pidLine in out.split(separator: "\n") {
                 guard let pid = Int32(pidLine.trimmingCharacters(in: .whitespaces)) else { continue }
                 if let app = guiApp(abovePid: pid) {

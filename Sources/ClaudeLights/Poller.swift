@@ -8,7 +8,6 @@ final class Poller {
     /// Injected by the app: bundle id of the frontmost terminal, else nil.
     var frontmostTerminalBundleID: () -> String? = { nil }
 
-    private let tmuxPath = BinaryLocator.locate("tmux")
     private let queue = DispatchQueue(label: "me.honghao.claudelights.poller")
     private var timer: DispatchSourceTimer?
     private var watcher: RegistryWatcher?
@@ -102,8 +101,7 @@ final class Poller {
         }
 
         var panes: [TmuxPane] = []
-        if let tmuxPath,
-           let panesOut = Shell.run(tmuxPath, ["list-panes", "-a", "-F", TmuxMapper.panesFormat]) {
+        if let panesOut = Tmux.run(["list-panes", "-a", "-F", TmuxMapper.panesFormat]) {
             panes = TmuxMapper.parsePanes(panesOut)
         }
 
@@ -112,9 +110,8 @@ final class Poller {
         // for seen-tracking (greens) and notification silencing (reds).
         var activeWindows = Set<String>()
         var clients: [TmuxClient] = []
-        if let tmuxPath,
-           let clientsOut = Shell.run(tmuxPath, ["list-clients", "-F", TmuxMapper.clientsFormat]),
-           let windowsOut = Shell.run(tmuxPath, ["list-windows", "-a", "-F", TmuxMapper.windowsFormat]) {
+        if let clientsOut = Tmux.run(["list-clients", "-F", TmuxMapper.clientsFormat]),
+           let windowsOut = Tmux.run(["list-windows", "-a", "-F", TmuxMapper.windowsFormat]) {
             clients = TmuxMapper.parseClients(clientsOut)
             activeWindows = TmuxMapper.parseActiveAttachedWindows(
                 attachedSessions: Set(clients.map(\.sessionName)), windowsOutput: windowsOut)
