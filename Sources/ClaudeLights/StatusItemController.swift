@@ -9,15 +9,23 @@ final class StatusItemController: NSObject {
 
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private var sessions: [Session] = []
+    private var lastError: String?
     private var spinTimer: Timer?
     private var spinAngle: CGFloat = 0
     private var aggregate: LightState = .gray
 
+    override init() {
+        super.init()
+        let menu = NSMenu()
+        menu.delegate = self // rebuilt on open so toggle states are always live
+        item.menu = menu
+    }
+
     func update(sessions: [Session], error: String?) {
         self.sessions = sessions
+        self.lastError = error
         aggregate = Aggregate.overall(sessions, hasError: error != nil)
         item.button?.toolTip = "Claude Lights"
-        item.menu = buildMenu(error: error)
         refreshButtonImage()
         // Spin the menu-bar gear only while the aggregate is running, so the
         // timer sleeps whenever nothing is working.
@@ -54,8 +62,7 @@ final class StatusItemController: NSObject {
         if spinAngle != 0 { spinAngle = 0; refreshButtonImage() }
     }
 
-    private func buildMenu(error: String?) -> NSMenu {
-        let menu = NSMenu()
+    private func populate(_ menu: NSMenu, error: String?) {
         if let error {
             menu.addItem(disabledItem(error))
         } else if sessions.isEmpty {
@@ -97,7 +104,6 @@ final class StatusItemController: NSObject {
 
         menu.addItem(NSMenuItem(title: "Quit Claude Lights",
                                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        return menu
     }
 
     private func disabledItem(_ title: String) -> NSMenuItem {
@@ -124,5 +130,14 @@ final class StatusItemController: NSObject {
         } else {
             try? SMAppService.mainApp.register()
         }
+    }
+}
+
+extension StatusItemController: NSMenuDelegate {
+    // Rebuild on every open so toggle checkmarks reflect the live state
+    // immediately rather than lagging until the next poll.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
+        populate(menu, error: lastError)
     }
 }
