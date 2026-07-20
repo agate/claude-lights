@@ -17,7 +17,7 @@ Includes an always-on-top floating light bar, one-click jump to the
 session's tmux window (iTerm2, Apple Terminal, or VS Code), and a
 notification with sound when a session needs you or finishes.
 
-![Floating light bar — one dot per session: waiting (!), running (spinning gear), done (✓), idle seen, just started](assets/screenshot-bar.png)
+![Floating light bar — one dot per session: waiting (!), running (spinning gear), answered with a background task (static gear), done (✓), idle seen, just started](assets/screenshot-bar.png)
 
 The bar updates live as sessions change state:
 
