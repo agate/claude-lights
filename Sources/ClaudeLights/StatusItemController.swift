@@ -43,7 +43,8 @@ final class StatusItemController: NSObject {
 
     private func refreshButtonImage() {
         item.button?.image = StatusIcon.image(for: aggregate, diameter: 17, margin: 1,
-                                              markRotation: spinAngle)
+                                              markRotation: spinAngle,
+                                              monochrome: IconStyle.monochrome)
     }
 
     private func startSpinner() {
@@ -94,7 +95,7 @@ final class StatusItemController: NSObject {
             mi.tag = index
             // Image column, not the state column: highlighted state-column
             // images get template-tinted white, which would erase the colors.
-            mi.image = StatusIcon.image(for: session.light)
+            mi.image = StatusIcon.image(for: session.light, monochrome: IconStyle.monochrome)
             mi.toolTip = "\(session.cwd)\n\(session.derivedName)"
             menu.addItem(mi)
         }
@@ -109,6 +110,12 @@ final class StatusItemController: NSObject {
         sounds.target = self
         sounds.image = Notifier.soundsEnabled ? Self.checkOnImage : Self.spacerImage
         menu.addItem(sounds)
+
+        let mono = NSMenuItem(title: "Monochrome Icons", action: #selector(toggleMonochrome),
+                              keyEquivalent: "")
+        mono.target = self
+        mono.image = IconStyle.monochrome ? Self.checkOnImage : Self.spacerImage
+        menu.addItem(mono)
 
         let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
         if Bundle.main.bundleIdentifier != nil {
@@ -196,6 +203,11 @@ final class StatusItemController: NSObject {
     }
 
     @objc private func toggleSounds() { Notifier.soundsEnabled.toggle() }
+
+    @objc private func toggleMonochrome() {
+        IconStyle.monochrome.toggle()
+        refreshButtonImage() // tray icon restyles at once; menu rebuilds on open
+    }
 
     /// Demo/testing hook: pops the tray menu open as if clicked.
     func openMenu() { item.button?.performClick(nil) }

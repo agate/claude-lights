@@ -1,6 +1,17 @@
 import AppKit
 import ClaudeLightsCore
 
+/// User toggle: render tray/menu status icons as monochrome template images
+/// (system-tinted, native menu-bar look) instead of colored discs. The
+/// floating bar is always colored — color is its whole point.
+enum IconStyle {
+    static let key = "monochromeIcons"
+    static var monochrome: Bool {
+        get { UserDefaults.standard.bool(forKey: key) }
+        set { UserDefaults.standard.set(newValue, forKey: key) }
+    }
+}
+
 /// Status dots encode state twice — a colorblind-safe hue (Okabe-Ito) and a
 /// glyph/shape — so no state is distinguishable by color alone.
 enum StatusIcon {
@@ -58,18 +69,25 @@ enum StatusIcon {
         }
     }
 
+    /// Monochrome = template rendering: only the alpha channel matters, so
+    /// the disc is drawn opaque and the mark is *knocked out* of it
+    /// (destinationOut) instead of painted white on top — the mark stays
+    /// visible whatever color the system tints the silhouette.
     static func image(for light: LightState, diameter: CGFloat = 14,
-                      margin: CGFloat = 2, markRotation: CGFloat = 0) -> NSImage {
+                      margin: CGFloat = 2, markRotation: CGFloat = 0,
+                      monochrome: Bool = false) -> NSImage {
         let size = NSSize(width: diameter + margin * 2, height: diameter + margin * 2)
+        let ink: NSColor = monochrome ? .black : color(light)
+        let markOp: NSCompositingOperation = monochrome ? .destinationOut : .sourceOver
         let image = NSImage(size: size, flipped: false) { rect in
             let circle = rect.insetBy(dx: margin, dy: margin)
             if isHollow(light) {
                 let path = NSBezierPath(ovalIn: circle.insetBy(dx: 1, dy: 1))
                 path.lineWidth = 1.8
-                color(light).setStroke()
+                ink.setStroke()
                 path.stroke()
             } else {
-                color(light).setFill()
+                ink.setFill()
                 NSBezierPath(ovalIn: circle).fill()
             }
             if let mark = mark(for: light, diameter: diameter) {
@@ -82,17 +100,19 @@ enum StatusIcon {
                     t.rotate(byDegrees: markRotation)
                     t.concat()
                     mark.draw(in: NSRect(x: -m.width / 2, y: -m.height / 2,
-                                         width: m.width, height: m.height))
+                                         width: m.width, height: m.height),
+                              from: .zero, operation: markOp, fraction: 1)
                     NSGraphicsContext.restoreGraphicsState()
                 } else {
                     mark.draw(in: NSRect(x: circle.midX - m.width / 2,
                                          y: circle.midY - m.height / 2 - nudge,
-                                         width: m.width, height: m.height))
+                                         width: m.width, height: m.height),
+                              from: .zero, operation: markOp, fraction: 1)
                 }
             }
             return true
         }
-        image.isTemplate = false
+        image.isTemplate = monochrome
         return image
     }
 
