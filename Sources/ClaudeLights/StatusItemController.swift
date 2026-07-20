@@ -90,13 +90,15 @@ final class StatusItemController: NSObject {
                                 action: #selector(jumpItem(_:)), keyEquivalent: "")
             mi.target = self
             mi.tag = index
-            mi.image = StatusIcon.image(for: session.light)
+            // In the state column (not .image) so the dots share a column
+            // with the toggle checkmarks instead of sitting beside them.
+            mi.offStateImage = StatusIcon.image(for: session.light)
             mi.toolTip = "\(session.cwd)\n\(session.derivedName)"
             menu.addItem(mi)
         }
         menu.addItem(.separator())
 
-        let toggle = NSMenuItem(title: "Show Light Bar", action: #selector(toggleBar), keyEquivalent: "b")
+        let toggle = NSMenuItem(title: "Show Light Bar", action: #selector(toggleBar), keyEquivalent: "")
         toggle.target = self
         toggle.state = isBarShown() ? .on : .off
         menu.addItem(toggle)
@@ -127,8 +129,14 @@ final class StatusItemController: NSObject {
         } // else: no bundle, no version to show
         menu.addItem(about)
 
-        menu.addItem(NSMenuItem(title: "Quit Claude Lights",
-                                action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        // Custom action, not NSApplication.terminate(_:) — macOS 26 infers a
+        // system icon for the standard quit selector, which forces an image
+        // column onto the whole section and misaligns it. No key equivalent
+        // either: the shortcut column pads the menu's right edge.
+        let quit = NSMenuItem(title: "Quit Claude Lights",
+                              action: #selector(quitApp), keyEquivalent: "")
+        quit.target = self
+        menu.addItem(quit)
     }
 
     private func disabledItem(_ title: String) -> NSMenuItem {
@@ -143,6 +151,8 @@ final class StatusItemController: NSObject {
     }
 
     @objc private func toggleBar() { onToggleBar?() }
+
+    @objc private func quitApp() { NSApp.terminate(nil) }
 
     @objc private func installUpdate() { onInstallUpdate?() }
 
