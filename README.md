@@ -9,6 +9,7 @@ so it reads clearly regardless of color vision:
 | **!** vermillion | Waiting for you (input / permission approval) |
 | ⚙ amber (spinning) | Running (working) |
 | **✓** bluish-green | Done — finished, not yet looked at |
+| ⚙ bluish-green (static) | Answered — a background task is still running |
 | filled gray | Idle — already seen |
 | hollow gray | Just started, nothing yet |
 
