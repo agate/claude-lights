@@ -156,6 +156,15 @@ final class FloatingBar: NSObject, NSWindowDelegate {
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil, queue: .main
         ) { [weak self] _ in self?.followFocusedScreen() }
+
+        // Switching to an app on another display follows instantly instead
+        // of waiting for the next poll: the click that activated it already
+        // put the cursor on that screen, and activations are rare enough to
+        // cost nothing. Same-app window switches stay on the poll.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in self?.followFocusedScreen() }
     }
 
     /// The screen the user is working on — approximated by cursor location.
