@@ -45,7 +45,23 @@ enum StatusIcon {
     /// The white mark drawn on the disc (gear for running, glyph otherwise),
     /// cropped tight to its visible pixels so callers can center it exactly.
     /// The floating bar also rotates this image for the running animation.
+    ///
+    /// Cached: building a mark scans a supersampled bitmap pixel-by-pixel,
+    /// and the spinner asks for the gear 15×/s — recomputing per frame kept
+    /// a core ~40% busy. The mark doesn't depend on rotation (callers apply
+    /// a transform when drawing), so (state, diameter) fully keys it.
+    /// Main-thread only, like all AppKit drawing here.
+    private static var markCache: [String: NSImage?] = [:]
+
     static func mark(for light: LightState, diameter: CGFloat) -> NSImage? {
+        let key = "\(light)-\(diameter)"
+        if let cached = markCache[key] { return cached }
+        let built = buildMark(for: light, diameter: diameter)
+        markCache[key] = built
+        return built
+    }
+
+    private static func buildMark(for light: LightState, diameter: CGFloat) -> NSImage? {
         if light == .yellow {
             let config = NSImage.SymbolConfiguration(pointSize: diameter * 0.72, weight: .bold)
             guard let gear = NSImage(systemSymbolName: "gearshape.fill",
@@ -73,9 +89,26 @@ enum StatusIcon {
     /// the disc is drawn opaque and the mark is *knocked out* of it
     /// (destinationOut) instead of painted white on top — the mark stays
     /// visible whatever color the system tints the silhouette.
+    ///
+    /// Cached like `mark`: the spinner requests a new rotation 15×/s, but
+    /// angles advance in 12° steps, so one revolution is only 30 distinct
+    /// images — after that the spinner costs nothing.
+    private static var imageCache: [String: NSImage] = [:]
+
     static func image(for light: LightState, diameter: CGFloat = 14,
                       margin: CGFloat = 2, markRotation: CGFloat = 0,
                       monochrome: Bool = false) -> NSImage {
+        let key = "\(light)-\(diameter)-\(margin)-\(markRotation)-\(monochrome)"
+        if let cached = imageCache[key] { return cached }
+        let built = buildImage(for: light, diameter: diameter, margin: margin,
+                               markRotation: markRotation, monochrome: monochrome)
+        imageCache[key] = built
+        return built
+    }
+
+    private static func buildImage(for light: LightState, diameter: CGFloat,
+                                   margin: CGFloat, markRotation: CGFloat,
+                                   monochrome: Bool) -> NSImage {
         let size = NSSize(width: diameter + margin * 2, height: diameter + margin * 2)
         let ink: NSColor = monochrome ? .black : color(light)
         let markOp: NSCompositingOperation = monochrome ? .destinationOut : .sourceOver
