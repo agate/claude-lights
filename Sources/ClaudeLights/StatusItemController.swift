@@ -120,7 +120,7 @@ final class StatusItemController: NSObject {
         } // else: left targetless -> disabled under `swift run` (no bundle)
         menu.addItem(check)
 
-        let about = NSMenuItem(title: "About Claude Lights",
+        let about = NSMenuItem(title: "About",
                                action: #selector(showAbout), keyEquivalent: "")
         if Bundle.main.bundleIdentifier != nil {
             about.target = self
