@@ -100,18 +100,20 @@ final class StatusItemController: NSObject {
 
         let toggle = NSMenuItem(title: "Show Light Bar", action: #selector(toggleBar), keyEquivalent: "")
         toggle.target = self
-        toggle.state = isBarShown() ? .on : .off
+        // macOS 26 ignores onStateImage, so the bold check rides the
+        // offStateImage channel (state stays .off) like the session dots.
+        if isBarShown() { toggle.offStateImage = Self.checkOnImage }
         menu.addItem(toggle)
 
         let sounds = NSMenuItem(title: "Notification Sounds", action: #selector(toggleSounds), keyEquivalent: "")
         sounds.target = self
-        sounds.state = Notifier.soundsEnabled ? .on : .off
+        if Notifier.soundsEnabled { sounds.offStateImage = Self.checkOnImage }
         menu.addItem(sounds)
 
         let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
         if Bundle.main.bundleIdentifier != nil {
             login.target = self
-            login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+            if SMAppService.mainApp.status == .enabled { login.offStateImage = Self.checkOnImage }
         } // else: left targetless -> disabled under `swift run` (no bundle)
         menu.addItem(login)
 
@@ -133,11 +135,21 @@ final class StatusItemController: NSObject {
         // system icon for the standard quit selector, which forces an image
         // column onto the whole section and misaligns it. No key equivalent
         // either: the shortcut column pads the menu's right edge.
-        let quit = NSMenuItem(title: "Quit Claude Lights",
+        let quit = NSMenuItem(title: "Quit",
                               action: #selector(quitApp), keyEquivalent: "")
         quit.target = self
         menu.addItem(quit)
     }
+
+    /// Bold system checkmark matching the status dots' visual weight, so the
+    /// shared state column reads as one family. Template → follows dark mode.
+    private static let checkOnImage: NSImage? = {
+        let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .bold)
+        let img = NSImage(systemSymbolName: "checkmark", accessibilityDescription: "on")?
+            .withSymbolConfiguration(config)
+        img?.isTemplate = true
+        return img
+    }()
 
     private func disabledItem(_ title: String) -> NSMenuItem {
         let mi = NSMenuItem(title: title, action: nil, keyEquivalent: "")
