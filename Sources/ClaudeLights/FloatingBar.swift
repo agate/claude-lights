@@ -121,6 +121,11 @@ final class FloatingBar: NSObject, NSWindowDelegate {
     private let tooltipPanel: NSPanel
     private let tooltipLabel = NSTextField(labelWithString: "")
 
+    /// Screen frame the cursor was last seen on; lets the mouse-move handler
+    /// bail with a single rect test until the cursor actually crosses screens.
+    private var cursorScreenFrame: NSRect = .zero
+    private var mouseMonitors: [Any] = []
+
     init(store: SessionStore, onJump: @escaping (Session) -> Void) {
         self.store = store
         panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 60, height: 28),
@@ -156,6 +161,39 @@ final class FloatingBar: NSObject, NSWindowDelegate {
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil, queue: .main
         ) { [weak self] _ in self?.followFocusedScreen() }
+
+        watchCursorAcrossScreens()
+    }
+
+    deinit {
+        mouseMonitors.forEach { NSEvent.removeMonitor($0) }
+    }
+
+    /// There is no system event for "the cursor moved to another display",
+    /// so build one: watch mouse moves (no accessibility permission needed
+    /// for mouse events) and react only when the containing screen changes —
+    /// otherwise the bar waits for the next poll to follow the cursor.
+    private func watchCursorAcrossScreens() {
+        let onMove: () -> Void = { [weak self] in
+            guard let self else { return }
+            let mouse = NSEvent.mouseLocation
+            if NSMouseInRect(mouse, self.cursorScreenFrame, false) { return }
+            guard let screen = NSScreen.screens.first(where: {
+                NSMouseInRect(mouse, $0.frame, false)
+            }) else { return }
+            self.cursorScreenFrame = screen.frame
+            self.followFocusedScreen()
+        }
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved],
+                                                          handler: { _ in onMove() }) {
+            mouseMonitors.append(global)
+        }
+        // Global monitors skip events our own app receives (e.g. the cursor
+        // is over the bar itself); a local monitor covers those.
+        if let local = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved],
+                                                        handler: { event in onMove(); return event }) {
+            mouseMonitors.append(local)
+        }
     }
 
     /// The screen the user is working on — approximated by cursor location.
