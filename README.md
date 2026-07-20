@@ -64,6 +64,12 @@ launch macOS will refuse to open it. Either:
 
 The binary is universal (Apple Silicon + Intel).
 
+Once installed, the app keeps itself up to date: it checks GitHub Releases
+on launch and daily, notifies you when a new version is out, and updates in
+one click (**Check for Updates…** in the menu works any time). In-app
+updates carry no quarantine flag, so the Gatekeeper step above is only ever
+needed once.
+
 ### First launch
 
 Grant the notification permission when asked; the first click-to-jump also
@@ -81,8 +87,8 @@ or VS Code).
   - Drag it near the **top-right corner** to magnetically pin it there; it
     then stays flush with that corner as sessions come and go. Drag it away
     to unpin.
-  - It **follows the screen you're working on** and moves to a remaining
-    screen if you unplug a monitor.
+  - It **follows the screen you're working on** (instantly when you switch
+    apps) and moves to a remaining screen if you unplug a monitor.
 - **Jump** switches tmux to the session's window/pane and focuses the exact
   iTerm2 / Apple Terminal tab, or the VS Code window for its folder. If every
   terminal window is closed, it offers to open a new one attached to the
@@ -92,5 +98,7 @@ or VS Code).
 - **Notifications** fire (banner + sound) when a session turns red or
   finishes working — silenced automatically when you're already looking at
   that session's window. Toggle sound with **Notification Sounds** in the menu.
-- **Show Light Bar**, **Launch at Login** (requires the .app bundle), and
-  **Quit** are in the menu.
+- **Menu extras**: **Show Light Bar**, **Monochrome Icons** (system-tinted
+  template icons for the menu bar and menu, following light/dark mode),
+  **Launch at Login** (requires the .app bundle), **Check for Updates…**,
+  **About**, and **Quit**.
