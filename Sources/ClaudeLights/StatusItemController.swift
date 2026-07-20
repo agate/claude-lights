@@ -120,6 +120,13 @@ final class StatusItemController: NSObject {
         } // else: left targetless -> disabled under `swift run` (no bundle)
         menu.addItem(check)
 
+        let about = NSMenuItem(title: "About Claude Lights",
+                               action: #selector(showAbout), keyEquivalent: "")
+        if Bundle.main.bundleIdentifier != nil {
+            about.target = self
+        } // else: no bundle, no version to show
+        menu.addItem(about)
+
         menu.addItem(NSMenuItem(title: "Quit Claude Lights",
                                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
@@ -140,6 +147,13 @@ final class StatusItemController: NSObject {
     @objc private func installUpdate() { onInstallUpdate?() }
 
     @objc private func checkForUpdates() { onCheckForUpdates?() }
+
+    @objc private func showAbout() {
+        // LSUIElement apps have no Dock presence; activate or the panel
+        // opens behind the frontmost app.
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.orderFrontStandardAboutPanel(nil)
+    }
 
     @objc private func toggleSounds() { Notifier.soundsEnabled.toggle() }
 

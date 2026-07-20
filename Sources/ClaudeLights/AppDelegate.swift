@@ -137,8 +137,9 @@ extension AppDelegate: UpdaterEngineDelegate {
 
     func updaterIsUpToDate(userInitiated: Bool) {
         guard userInitiated else { return }
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
         updateAlert(title: "You're up to date",
-                    text: "This is the latest version of Claude Lights.")
+                    text: "Claude Lights \(version.map { "v\($0)" } ?? "") is the latest version.")
     }
 
     func updaterFailed(error: String, userInitiated: Bool) {
