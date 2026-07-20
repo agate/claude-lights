@@ -10,12 +10,15 @@ public enum TransitionDetector {
     }
 
     /// Sessions that just finished working: they were busy (or waiting) and
-    /// are now idle. New sessions appearing green never count.
+    /// are now in the green family. New sessions appearing green never count,
+    /// and settling within the family (greenBg → green when a background
+    /// task ends without new output) never re-notifies.
     public static func newlyDone(previous: [String: LightState]?,
                                  current: [Session]) -> [Session] {
         guard let previous else { return [] }
+        let family: Set<LightState> = [.green, .greenSeen, .greenBg]
         return current.filter { session in
-            (session.light == .green || session.light == .greenSeen) &&
+            family.contains(session.light) &&
             (previous[session.id] == .yellow || previous[session.id] == .red)
         }
     }

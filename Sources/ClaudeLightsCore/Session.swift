@@ -131,6 +131,7 @@ public enum SessionBuilder {
         switch light {
         case .red: return "Waiting for you"
         case .yellow: return "Working"
+        case .greenBg: return "Background running"
         case .green, .greenSeen: return "Idle"
         case .gray: return "Unknown"
         }

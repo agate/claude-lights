@@ -19,7 +19,8 @@ enum StatusIcon {
         switch light {
         case .red:    return NSColor(srgbRed: 0.835, green: 0.369, blue: 0.000, alpha: 1) // vermillion
         case .yellow: return NSColor(srgbRed: 0.902, green: 0.624, blue: 0.000, alpha: 1) // amber
-        case .green:  return NSColor(srgbRed: 0.000, green: 0.620, blue: 0.451, alpha: 1) // bluish green
+        case .green, .greenBg:
+                      return NSColor(srgbRed: 0.000, green: 0.620, blue: 0.451, alpha: 1) // bluish green
         case .greenSeen, .gray: return .systemGray
         }
     }
@@ -28,7 +29,7 @@ enum StatusIcon {
         switch light {
         case .red: return "!"
         case .green: return "✓"
-        case .yellow, .greenSeen, .gray: return nil
+        case .yellow, .greenBg, .greenSeen, .gray: return nil
         }
     }
 
@@ -62,7 +63,9 @@ enum StatusIcon {
     }
 
     private static func buildMark(for light: LightState, diameter: CGFloat) -> NSImage? {
-        if light == .yellow {
+        // Gear = "a task is running": spinning on amber (main thread busy),
+        // static on green (.greenBg — answered, background task still alive).
+        if light == .yellow || light == .greenBg {
             let config = NSImage.SymbolConfiguration(pointSize: diameter * 0.72, weight: .bold)
             guard let gear = NSImage(systemSymbolName: "gearshape.fill",
                                      accessibilityDescription: "running")?

@@ -37,6 +37,20 @@ final class TransitionDetectorTests: XCTestCase {
                                                     current: [s("a", .greenSeen)]).map(\.id), ["a"])
     }
 
+    func testMainThreadDoneWithBackgroundTaskNotifies() {
+        // busy → shell: the assistant delivered its answer, a background
+        // task keeps running. That answer is worth one notification.
+        let out = TransitionDetector.newlyDone(previous: ["a": .yellow], current: [s("a", .greenBg)])
+        XCTAssertEqual(out.map(\.id), ["a"])
+    }
+
+    func testBackgroundTaskSettlingDoesNotRenotify() {
+        // shell → idle (background task ended, nothing new was said) and
+        // shell → busy (main thread resumed) must both stay silent.
+        XCTAssertEqual(TransitionDetector.newlyDone(previous: ["a": .greenBg], current: [s("a", .green)]), [])
+        XCTAssertEqual(TransitionDetector.newlyDone(previous: ["a": .greenBg], current: [s("a", .yellow)]), [])
+    }
+
     func testDoneDoesNotFireForNewOrUnchangedSessions() {
         XCTAssertEqual(TransitionDetector.newlyDone(previous: nil, current: [s("a", .green)]), [])
         XCTAssertEqual(TransitionDetector.newlyDone(previous: [:], current: [s("a", .green)]), [])

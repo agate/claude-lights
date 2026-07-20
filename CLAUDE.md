@@ -24,9 +24,13 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
 - **Data source is the registry, not the CLI.** Read `~/.claude/sessions/<pid>.json`
   directly (with `kill(pid,0)` liveness); `claude agents --json` is only the
   schema reference. Registry uses `kind:"bg"` (CLI prints `"background"`).
-- **Status values:** `busy`/`shell`/`working`/`running` → working; `waiting`
-  (+ `waitingFor` reason) → needs-you (red); `idle`/`state:done` → done.
-  Unknown → gray, never crash. `waiting` requires Claude Code ≥ 2.1.207.
+- **Status values:** `busy`/`working`/`running` → working; `shell` → greenBg
+  (main thread answered, background task still running — green disc, static
+  gear; verified on 2.1.212 that foreground commands report `busy`, though
+  2.1.209 reported `shell` for those too); `waiting` (+ `waitingFor` reason)
+  → needs-you (red); `idle`/`state:done` → done. Unknown → gray, never
+  crash. `waiting` requires Claude Code ≥ 2.1.207. greenBg notifies once on
+  busy→shell (the answer), never again on shell→idle.
 - **A backgrounded session leaves a stale interactive record + a live bg
   record under one sessionId** — merge by sessionId, freshest wins status.
 - **Session title** (`/status`/`/resume`) is persisted as `ai-title` lines in
