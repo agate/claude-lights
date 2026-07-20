@@ -75,24 +75,26 @@ final class StatusItemController: NSObject {
             menu.addItem(.separator())
         }
         if let error {
-            menu.addItem(disabledItem(error))
+            menu.addItem(disabledItem(error, indented: !sessions.isEmpty))
         } else if sessions.isEmpty {
             menu.addItem(disabledItem("No Claude sessions"))
         }
         // Advise when a session runs a Claude Code too old to report the
         // waiting state — without it, that session can never turn red.
         if sessions.contains(where: { !SupportedVersion.isSupported($0.version) }) {
-            menu.addItem(disabledItem("⚠ Update Claude Code to ≥ \(SupportedVersion.minimum)"))
-            menu.addItem(disabledItem("    older sessions may not show “waiting”"))
+            menu.addItem(disabledItem("⚠ Update Claude Code to ≥ \(SupportedVersion.minimum)",
+                                      indented: !sessions.isEmpty))
+            menu.addItem(disabledItem("    older sessions may not show “waiting”",
+                                      indented: !sessions.isEmpty))
         }
         for (index, session) in sessions.enumerated() {
             let mi = NSMenuItem(title: session.summaryLine(),
                                 action: #selector(jumpItem(_:)), keyEquivalent: "")
             mi.target = self
             mi.tag = index
-            // In the state column (not .image) so the dots share a column
-            // with the toggle checkmarks instead of sitting beside them.
-            mi.offStateImage = StatusIcon.image(for: session.light)
+            // Image column, not the state column: highlighted state-column
+            // images get template-tinted white, which would erase the colors.
+            mi.image = StatusIcon.image(for: session.light)
             mi.toolTip = "\(session.cwd)\n\(session.derivedName)"
             menu.addItem(mi)
         }
@@ -100,21 +102,20 @@ final class StatusItemController: NSObject {
 
         let toggle = NSMenuItem(title: "Show Light Bar", action: #selector(toggleBar), keyEquivalent: "")
         toggle.target = self
-        // macOS 26 ignores onStateImage, so the bold check rides the
-        // offStateImage channel (state stays .off) like the session dots.
-        if isBarShown() { toggle.offStateImage = Self.checkOnImage }
+        toggle.image = isBarShown() ? Self.checkOnImage : Self.spacerImage
         menu.addItem(toggle)
 
         let sounds = NSMenuItem(title: "Notification Sounds", action: #selector(toggleSounds), keyEquivalent: "")
         sounds.target = self
-        if Notifier.soundsEnabled { sounds.offStateImage = Self.checkOnImage }
+        sounds.image = Notifier.soundsEnabled ? Self.checkOnImage : Self.spacerImage
         menu.addItem(sounds)
 
         let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin), keyEquivalent: "")
         if Bundle.main.bundleIdentifier != nil {
             login.target = self
-            if SMAppService.mainApp.status == .enabled { login.offStateImage = Self.checkOnImage }
         } // else: left targetless -> disabled under `swift run` (no bundle)
+        login.image = SMAppService.mainApp.status == .enabled
+            ? Self.checkOnImage : Self.spacerImage
         menu.addItem(login)
 
         let check = NSMenuItem(title: "Check for Updates…",
@@ -122,6 +123,7 @@ final class StatusItemController: NSObject {
         if Bundle.main.bundleIdentifier != nil {
             check.target = self
         } // else: left targetless -> disabled under `swift run` (no bundle)
+        check.image = Self.spacerImage
         menu.addItem(check)
 
         let about = NSMenuItem(title: "About",
@@ -129,6 +131,7 @@ final class StatusItemController: NSObject {
         if Bundle.main.bundleIdentifier != nil {
             about.target = self
         } // else: no bundle, no version to show
+        about.image = Self.spacerImage
         menu.addItem(about)
 
         // Custom action, not NSApplication.terminate(_:) — macOS 26 infers a
@@ -138,22 +141,37 @@ final class StatusItemController: NSObject {
         let quit = NSMenuItem(title: "Quit",
                               action: #selector(quitApp), keyEquivalent: "")
         quit.target = self
+        quit.image = Self.spacerImage
         menu.addItem(quit)
     }
 
-    /// Bold system checkmark matching the status dots' visual weight, so the
-    /// shared state column reads as one family. Template → follows dark mode.
+    /// Bold system checkmark matching the status dots' visual weight, on the
+    /// dots' 18 pt canvas so both sections' image columns align. Template →
+    /// tints with the item (black/white, follows dark mode and highlight).
     private static let checkOnImage: NSImage? = {
         let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .bold)
-        let img = NSImage(systemSymbolName: "checkmark", accessibilityDescription: "on")?
-            .withSymbolConfiguration(config)
-        img?.isTemplate = true
+        guard let symbol = NSImage(systemSymbolName: "checkmark", accessibilityDescription: "on")?
+            .withSymbolConfiguration(config) else { return nil }
+        let side: CGFloat = 18 // = StatusIcon.image default diameter 14 + margin 2×2
+        let img = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+            let s = symbol.size
+            symbol.draw(in: NSRect(x: rect.midX - s.width / 2, y: rect.midY - s.height / 2,
+                                   width: s.width, height: s.height))
+            return true
+        }
+        img.isTemplate = true
         return img
     }()
 
-    private func disabledItem(_ title: String) -> NSMenuItem {
+    /// Transparent placeholder: the image column indents per item, so
+    /// imageless items need this to share a text edge with icon-bearing ones.
+    private static let spacerImage = NSImage(size: NSSize(width: 18, height: 18),
+                                             flipped: false) { _ in true }
+
+    private func disabledItem(_ title: String, indented: Bool = false) -> NSMenuItem {
         let mi = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         mi.isEnabled = false
+        if indented { mi.image = Self.spacerImage }
         return mi
     }
 
