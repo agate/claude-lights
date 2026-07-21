@@ -19,9 +19,13 @@ notification with sound when a session needs you or finishes.
 
 ![Floating light bar — one dot per session: waiting (!), running (spinning gear), answered with a background task (static gear), done (✓), idle seen, just started](assets/screenshot-bar.png)
 
-The bar updates live as sessions change state:
+The full loop in ~40 s (2× speed) — hover a dot for details, click it to
+jump straight to that session's tmux window, watch states settle as work
+finishes, and check the menu for the session list:
 
-![A session cycling through working, waiting-for-you, and idle](assets/demo.gif)
+![Demo: hovering dots for tooltips, click-to-jump switching tmux windows in iTerm2, sessions turning from waiting/working/background to done, and the session menu](assets/demo.gif)
+
+([Full-quality video](assets/demo.mov))
 
 ## Requirements
 
