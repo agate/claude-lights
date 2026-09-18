@@ -105,9 +105,9 @@ final class Poller {
             panes = TmuxMapper.parsePanes(panesOut)
         }
 
-        // Visibility: a session whose tmux window is the active window of an
-        // attached client while a terminal is frontmost is on screen. Used
-        // for seen-tracking (greens) and notification silencing (reds).
+        // Visibility: a session in the focused pane of the active window of
+        // an attached client, while a terminal is frontmost. Used for
+        // seen-tracking (greens) and notification silencing (reds).
         var activeWindows = Set<String>()
         var clients: [TmuxClient] = []
         if let clientsOut = Tmux.run(["list-clients", "-F", TmuxMapper.clientsFormat]),
@@ -142,17 +142,13 @@ final class Poller {
                                         newIds: newIds)
         let all = Set(base.map(\.id))
         let greens = Set(base.filter { $0.light == .green }.map(\.id))
-        // A session is on screen only when it lives in the tmux session the
-        // user is focused on AND its window is that session's active window.
-        var visible = Set<String>()
-        if let focusedSessionName {
-            for session in base {
-                if session.tmuxSession == focusedSessionName, let window = session.tmuxWindow,
-                   activeWindows.contains(focusedSessionName + ":" + window) {
-                    visible.insert(session.id)
-                }
-            }
-        }
+        // On screen means: the focused tmux session, its active window, and
+        // that window's active pane — a split window shows several panes at
+        // once, but only the focused one has been read.
+        let visible = SeenTracker.focusedIds(sessions: base,
+                                             focusedSessionName: focusedSessionName,
+                                             activeWindows: activeWindows,
+                                             activePaneIds: TmuxMapper.activePaneIds(panes))
         seen = SeenTracker.update(seen: seen, greens: greens, visible: visible, all: all)
         refreshTitles(records: records, all: all)
 

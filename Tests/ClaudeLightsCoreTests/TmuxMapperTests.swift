@@ -3,13 +3,14 @@ import XCTest
 
 final class TmuxMapperTests: XCTestCase {
     let sep = TmuxMapper.sep
-    lazy var panesFixture = "/dev/ttys001\(sep)main\(sep)0\(sep)%0\n/dev/ttys004\(sep)main\(sep)1\(sep)%1\n/dev/ttys007\(sep)work session\(sep)2\(sep)%5\n"
+    lazy var panesFixture = "/dev/ttys001\(sep)main\(sep)0\(sep)%0\(sep)1\n/dev/ttys004\(sep)main\(sep)1\(sep)%1\(sep)1\n/dev/ttys007\(sep)work session\(sep)2\(sep)%5\(sep)0\n"
     let psFixture = "  783 ttys001\n 9895 ??\n12345 ttys007\n"
 
     func testParsePanes() {
         let panes = TmuxMapper.parsePanes(panesFixture)
         XCTAssertEqual(panes.count, 3)
-        XCTAssertEqual(panes[0], TmuxPane(tty: "/dev/ttys001", sessionName: "main", windowIndex: "0", paneId: "%0"))
+        XCTAssertEqual(panes[0], TmuxPane(tty: "/dev/ttys001", sessionName: "main", windowIndex: "0",
+                                          paneId: "%0", isActive: true))
         XCTAssertEqual(panes[2].sessionName, "work session")
     }
 

@@ -15,10 +15,14 @@ public struct TmuxPane: Equatable, Sendable {
     public let sessionName: String
     public let windowIndex: String
     public let paneId: String
+    /// True when this pane is the active (focused) pane of its window.
+    public let isActive: Bool
 
-    public init(tty: String, sessionName: String, windowIndex: String, paneId: String) {
+    public init(tty: String, sessionName: String, windowIndex: String, paneId: String,
+                isActive: Bool = false) {
         self.tty = tty; self.sessionName = sessionName
         self.windowIndex = windowIndex; self.paneId = paneId
+        self.isActive = isActive
     }
 }
 
@@ -34,14 +38,21 @@ public enum TmuxMapper {
     }
 
     /// Format string used with `tmux list-panes -a -F`.
-    public static let panesFormat = "#{pane_tty}\(sep)#{session_name}\(sep)#{window_index}\(sep)#{pane_id}"
+    public static let panesFormat =
+        "#{pane_tty}\(sep)#{session_name}\(sep)#{window_index}\(sep)#{pane_id}\(sep)#{pane_active}"
 
     public static func parsePanes(_ output: String) -> [TmuxPane] {
         output.split(separator: "\n").compactMap { line in
             let parts = fields(line)
-            guard parts.count == 4 else { return nil }
-            return TmuxPane(tty: parts[0], sessionName: parts[1], windowIndex: parts[2], paneId: parts[3])
+            guard parts.count == 5 else { return nil }
+            return TmuxPane(tty: parts[0], sessionName: parts[1], windowIndex: parts[2],
+                            paneId: parts[3], isActive: parts[4] == "1")
         }
+    }
+
+    /// Ids of the panes that are the active pane of their own window.
+    public static func activePaneIds(_ panes: [TmuxPane]) -> Set<String> {
+        Set(panes.filter(\.isActive).map(\.paneId))
     }
 
     /// Parses `ps -o pid=,tty= -p <pids>`; ttys come back as e.g. "ttys001".
