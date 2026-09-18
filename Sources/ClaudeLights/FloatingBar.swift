@@ -102,6 +102,17 @@ struct BarView: View {
 /// window-activation policy and never reach the SwiftUI gestures.
 private final class FirstMouseHostingView: NSHostingView<BarView> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    /// Accepting first mouse is what makes clicks work here, but it also
+    /// makes this view claim every mouse-down — so AppKit's
+    /// `isMovableByWindowBackground` drag never got a chance to start and the
+    /// bar could not be moved at all. Take the drag over on first actual
+    /// movement instead: mouse-down still reaches SwiftUI (taps keep
+    /// working), and `performDrag` then consumes events through mouse-up, so
+    /// a drag never also fires a dot's tap.
+    override func mouseDragged(with event: NSEvent) {
+        window?.performDrag(with: event)
+    }
 }
 
 final class FloatingBar: NSObject, NSWindowDelegate {
