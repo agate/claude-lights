@@ -5,7 +5,15 @@ cd "$(dirname "$0")/.."
 
 # Universal binary so Intel Macs work too.
 swift build -c release --arch arm64 --arch x86_64
-BIN=.build/apple/Products/Release/ClaudeLights
+
+# Newer toolchains emit into .build/out, older ones into .build/apple.
+# Accept either, and fail before touching the previous bundle.
+BIN=.build/out/Products/Release/ClaudeLights
+[ -f "$BIN" ] || BIN=.build/apple/Products/Release/ClaudeLights
+[ -f "$BIN" ] || {
+    echo "error: built binary not found in .build/out or .build/apple" >&2
+    exit 1
+}
 
 APP=build/ClaudeLights.app
 rm -rf "$APP"
