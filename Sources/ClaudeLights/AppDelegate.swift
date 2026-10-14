@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = SessionStore()
     let poller = Poller()
     private let jumper = Jumper()
+    private lazy var snapshots = SnapshotService(store: SnapshotStore(), jumper: jumper)
     private let notifier = Notifier()
     private let frontmostWatcher = FrontmostWatcher()
     private let updater: UpdaterEngine = GitHubUpdater()
@@ -103,6 +104,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.updater.installPendingUpdate()
         }
         updater.startPeriodicChecks()
+        statusController.snapshotMenuEntries = { [weak self] in
+            guard let self else { return [] }
+            switch self.snapshots.listings() {
+            case .success(let listings):
+                return SnapshotMenu.entries(listings, running: self.snapshots.runningSessionNames())
+            case .failure(let error):
+                return [SnapshotMenuEntry(title: error.localizedDescription, restoreName: nil,
+                                          enabled: false)]
+            }
+        }
+        statusController.restorableNames = { [weak self] in
+            guard let self, case .success(let listings) = self.snapshots.listings() else { return [] }
+            return SnapshotMenu.restorableNames(listings, running: self.snapshots.runningSessionNames())
+        }
+        statusController.onSaveSessions = { [weak self] in
+            guard let self else { return }
+            let sessions = self.store.sessions
+            DispatchQueue.global(qos: .userInitiated).async {
+                let body: String
+                do {
+                    _ = try self.snapshots.listings().get() // surfaces iCloudUnavailable
+                    body = self.snapshots.saveAll(sessions: sessions)
+                } catch {
+                    body = error.localizedDescription
+                }
+                DispatchQueue.main.async { self.notifier.notifyInfo(title: "Save Sessions", body: body) }
+            }
+        }
+        statusController.onRestore = { [weak self] names in
+            guard let self, !names.isEmpty else { return }
+            DispatchQueue.global(qos: .userInitiated).async {
+                let body = self.snapshots.restore(names: names)
+                DispatchQueue.main.async { self.notifier.notifyInfo(title: "Restore", body: body) }
+            }
+        }
     }
 
     /// Jumping to a session counts as looking at it.

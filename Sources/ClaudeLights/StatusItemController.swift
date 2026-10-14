@@ -7,6 +7,11 @@ final class StatusItemController: NSObject {
     var onToggleBar: (() -> Void)?
     var isBarShown: () -> Bool = { true }
     var onCheckForUpdates: (() -> Void)?
+    var onSaveSessions: (() -> Void)?
+    /// Snapshot names to restore (one for an item, all restorable for "Restore All").
+    var onRestore: (([String]) -> Void)?
+    var snapshotMenuEntries: () -> [SnapshotMenuEntry] = { [] }
+    var restorableNames: () -> [String] = { [] }
     var onInstallUpdate: (() -> Void)?
     /// Set when an update is pending, e.g. "v0.3.0"; menu rebuilds on open.
     var pendingUpdateVersion: String?
@@ -99,6 +104,28 @@ final class StatusItemController: NSObject {
             mi.toolTip = "\(session.cwd)\n\(session.derivedName)"
             menu.addItem(mi)
         }
+        menu.addItem(.separator())
+
+        let save = NSMenuItem(title: "Save Sessions", action: #selector(saveSessions), keyEquivalent: "")
+        save.target = self
+        save.image = Self.spacerImage
+        menu.addItem(save)
+
+        let restore = NSMenuItem(title: "Restore", action: nil, keyEquivalent: "")
+        restore.image = Self.spacerImage
+        let sub = NSMenu()
+        for entry in snapshotMenuEntries() {
+            if entry.title == SnapshotMenu.restoreAllTitle { sub.addItem(.separator()) }
+            let mi = NSMenuItem(title: entry.title,
+                                action: entry.enabled ? #selector(restoreItem(_:)) : nil,
+                                keyEquivalent: "")
+            mi.target = entry.enabled ? self : nil
+            mi.isEnabled = entry.enabled
+            mi.representedObject = entry.restoreName // nil → Restore All
+            sub.addItem(mi)
+        }
+        restore.submenu = sub
+        menu.addItem(restore)
         menu.addItem(.separator())
 
         let toggle = NSMenuItem(title: "Show Light Bar", action: #selector(toggleBar), keyEquivalent: "")
@@ -194,6 +221,16 @@ final class StatusItemController: NSObject {
     @objc private func installUpdate() { onInstallUpdate?() }
 
     @objc private func checkForUpdates() { onCheckForUpdates?() }
+
+    @objc private func saveSessions() { onSaveSessions?() }
+
+    @objc private func restoreItem(_ sender: NSMenuItem) {
+        if let name = sender.representedObject as? String {
+            onRestore?([name])
+        } else {
+            onRestore?(restorableNames())
+        }
+    }
 
     @objc private func showAbout() {
         // LSUIElement apps have no Dock presence; activate or the panel

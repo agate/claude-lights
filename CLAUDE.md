@@ -53,6 +53,12 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   `vX.Y.Z` == `CFBundleShortVersionString`, zip via `ditto --keepParent`.
   E2E test: lower the bundle's version, relaunch with
   `CLAUDE_LIGHTS_DEMO_AUTOINSTALL=1` — it self-updates from the live release.
+- **Save/Restore sessions:** snapshots live in iCloud Drive
+  (`ClaudeLights/sessions/<ComputerName>/<name>.json`, old tmux-claude v2
+  format), never locally. Non-tmux Claude sessions are saved together as
+  `claude-loose-sessions` and restored into a tmux session of that name.
+  Save only rewrites files of sessions running now. Single-pane windows are
+  targeted by window (not `.0`) so `pane-base-index` doesn't matter.
 
 ## Open issue
 - App is **ad-hoc signed** (no Team ID). macOS Automation (AppleScript)
