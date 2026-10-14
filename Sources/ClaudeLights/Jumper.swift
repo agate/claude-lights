@@ -59,7 +59,14 @@ final class Jumper {
     /// tty is a herdr pty that no terminal tab shows.
     private func jumpToHerdr(pane: String) {
         Herdr.run(["agent", "focus", pane])
-        for tty in Herdr.clientTtys() where focusTab(tty: tty) { return }
+        let ttys = Herdr.clientTtys()
+        guard !ttys.isEmpty else {
+            // The herdr server outlives its terminal window: offer a new one.
+            // Focus was set above, so the client opens on this pane.
+            offerToOpenHerdrWindow()
+            return
+        }
+        for tty in ttys where focusTab(tty: tty) { return }
         fallbackActivate()
     }
 
@@ -154,23 +161,46 @@ final class Jumper {
     /// No tmux client anywhere (all terminal windows closed). Ask, then open
     /// a fresh terminal window attached to the target session.
     private func offerToOpenWindow(attachingTo session: String) {
-        guard Tmux.path != nil, preferredTerminalBundleId() != nil else { return }
+        guard Tmux.path != nil else { return }
+        guard confirmOpenWindow(title: "No terminal window is attached to tmux",
+                                message: "Open a new terminal window attached to “\(session)”?")
+        else { return }
+        openTerminalWindow(attachingTo: session)
+    }
+
+    /// Same for herdr: its server keeps running after the window closes.
+    private func offerToOpenHerdrWindow() {
+        guard let herdrPath = Herdr.path else { return }
+        guard confirmOpenWindow(title: "No terminal window is attached to herdr",
+                                message: "Open a new terminal window attached to herdr?")
+        else { return }
+        openTerminalWindow(command: "'" + herdrPath.replacingOccurrences(of: "'", with: "'\\''") + "'")
+    }
+
+    private func confirmOpenWindow(title: String, message: String) -> Bool {
+        guard preferredTerminalBundleId() != nil else { return false }
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = "No terminal window is attached to tmux"
-        alert.informativeText =
-            "Open a new terminal window attached to “\(session)”?"
+        alert.messageText = title
+        alert.informativeText = message
         alert.addButton(withTitle: "Open Window")
         alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        openTerminalWindow(attachingTo: session)
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     /// Opens a new iTerm2 / Apple Terminal window running `tmux attach`.
     @discardableResult
     func openTerminalWindow(attachingTo session: String) -> Bool {
-        guard let tmuxPath = Tmux.path, let bundleId = preferredTerminalBundleId() else { return false }
-        let attach = TmuxMapper.attachCommand(tmuxPath: tmuxPath, session: session)
+        guard let tmuxPath = Tmux.path else { return false }
+        return openTerminalWindow(
+            command: TmuxMapper.attachCommand(tmuxPath: tmuxPath, session: session))
+    }
+
+    /// Opens a new iTerm2 / Apple Terminal window running a shell command.
+    @discardableResult
+    private func openTerminalWindow(command: String) -> Bool {
+        guard let bundleId = preferredTerminalBundleId() else { return false }
+        let attach = command
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
         let script: String
