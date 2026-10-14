@@ -51,6 +51,17 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         UNUserNotificationCenter.current().add(request)
     }
 
+    /// Plain informational banner (save/restore results); not clickable.
+    func notifyInfo(title: String, body: String) {
+        guard hasBundle, authorized else { return }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        let request = UNNotificationRequest(identifier: "info-\(UUID().uuidString)",
+                                            content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+
     private func post(_ session: Session, title: String, body: String) {
         // Stay silent when the user is already looking at this session's
         // window, or when sounds are toggled off in the menu.

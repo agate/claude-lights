@@ -141,7 +141,7 @@ final class Jumper {
     /// No tmux client anywhere (all terminal windows closed). Ask, then open
     /// a fresh terminal window attached to the target session.
     private func offerToOpenWindow(attachingTo session: String) {
-        guard let tmuxPath = Tmux.path, let bundleId = preferredTerminalBundleId() else { return }
+        guard Tmux.path != nil, preferredTerminalBundleId() != nil else { return }
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = "No terminal window is attached to tmux"
@@ -150,7 +150,12 @@ final class Jumper {
         alert.addButton(withTitle: "Open Window")
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
+        openTerminalWindow(attachingTo: session)
+    }
 
+    /// Opens a new iTerm2 / Apple Terminal window running `tmux attach`.
+    func openTerminalWindow(attachingTo session: String) {
+        guard let tmuxPath = Tmux.path, let bundleId = preferredTerminalBundleId() else { return }
         let attach = TmuxMapper.attachCommand(tmuxPath: tmuxPath, session: session)
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
