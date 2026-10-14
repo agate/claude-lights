@@ -20,9 +20,9 @@ final class SnapshotService {
         Result { try store.list() }
     }
 
-    private func baseIndex() -> Int {
+    private func baseIndex() -> Int? {
         Int(Tmux.run(["show-options", "-gv", "base-index"])?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "") ?? 0
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
     }
 
     /// Writes one file per running tmux session plus the loose snapshot.
@@ -39,7 +39,7 @@ final class SnapshotService {
             sessions: sessions,
             procs: ProcessTable.parse(Shell.run("/bin/ps", ProcessTable.psArguments) ?? ""),
             home: NSHomeDirectory(),
-            baseIndex: tmuxRunning ? baseIndex() : 0)
+            baseIndex: tmuxRunning ? (baseIndex() ?? 0) : 0)
         let savedAt = SnapshotCodec.timestamp(Date())
         var tmuxCount = 0, looseCount = 0
         var failures: [String] = []
@@ -79,17 +79,25 @@ final class SnapshotService {
                     problems.append("\(name): snapshot has no windows")
                     continue
                 }
-                if let error = run(RestorePlan.newSession(snap)) {
-                    problems.append("\(name): \(error)")
+                var failure = run(RestorePlan.newSession(snap))
+                if failure == nil {
+                    if let base = baseIndex() {
+                        let cmds = RestorePlan.commands(snap, baseIndex: base)
+                        failure = cmds.lazy.compactMap({ self.run($0) }).first
+                    } else {
+                        failure = "could not read tmux base-index"
+                    }
+                }
+                if let error = failure {
+                    // Remove the half-built session so a later Restore is not blocked.
+                    _ = Tmux.run(["kill-session", "-t", "=" + name])
+                    problems.append("\(name): \(error) (rolled back)")
                     continue
                 }
-                let cmds = RestorePlan.commands(snap, baseIndex: baseIndex())
-                if let error = cmds.lazy.compactMap({ self.run($0) }).first {
-                    problems.append("\(name): \(error)")
-                }
-                // Open the window even after a partial failure, so the user sees what was built.
-                jumper.openTerminalWindow(attachingTo: name)
                 restored.append(name)
+                if !jumper.openTerminalWindow(attachingTo: name) {
+                    problems.append("\(name): restored, but could not open a terminal window — run: tmux attach -t \(name)")
+                }
             } catch {
                 problems.append("\(name): \(error.localizedDescription)")
             }

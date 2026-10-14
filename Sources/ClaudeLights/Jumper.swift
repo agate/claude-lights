@@ -154,8 +154,9 @@ final class Jumper {
     }
 
     /// Opens a new iTerm2 / Apple Terminal window running `tmux attach`.
-    func openTerminalWindow(attachingTo session: String) {
-        guard let tmuxPath = Tmux.path, let bundleId = preferredTerminalBundleId() else { return }
+    @discardableResult
+    func openTerminalWindow(attachingTo session: String) -> Bool {
+        guard let tmuxPath = Tmux.path, let bundleId = preferredTerminalBundleId() else { return false }
         let attach = TmuxMapper.attachCommand(tmuxPath: tmuxPath, session: session)
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
@@ -175,7 +176,7 @@ final class Jumper {
             end tell
             """
         }
-        Shell.run("/usr/bin/osascript", ["-e", script])
+        return Shell.run("/usr/bin/osascript", ["-e", script]) != nil
     }
 
     /// iTerm2 or Apple Terminal — whichever is running, else installed.
