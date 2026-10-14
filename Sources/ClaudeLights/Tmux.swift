@@ -34,4 +34,10 @@ enum Tmux {
         guard let path else { return nil }
         return Shell.run(path, socketArgs() + args)
     }
+
+    /// Like `run`, but keeps the exit status and stderr for error reporting.
+    static func runResult(_ args: [String]) -> ShellResult? {
+        guard let path else { return nil }
+        return Shell.runResult(path, socketArgs() + args)
+    }
 }
