@@ -4,7 +4,9 @@ import Foundation
 public struct ProcessTable: Sendable {
     public static let psArguments = ["-ax", "-o", "pid=,ppid=,pgid=,tpgid=,args="]
 
-    struct Proc: Sendable { let pgid: Int; let tpgid: Int; let args: String; var children: [Int] }
+    struct Proc: Sendable {
+        let ppid: Int; let pgid: Int; let tpgid: Int; let args: String; var children: [Int]
+    }
     private(set) var procs: [Int: Proc] = [:]
 
     public static func parse(_ output: String) -> ProcessTable {
@@ -16,7 +18,7 @@ public struct ProcessTable: Sendable {
                   let pid = Int(parts[0]), let ppid = Int(parts[1]),
                   let pgid = Int(parts[2]), let tpgid = Int(parts[3]) else { continue }
             let args = parts.count > 4 ? String(parts[4]) : ""
-            table.procs[pid] = Proc(pgid: pgid, tpgid: tpgid, args: args, children: [])
+            table.procs[pid] = Proc(ppid: ppid, pgid: pgid, tpgid: tpgid, args: args, children: [])
             parents[pid] = ppid
         }
         for (pid, ppid) in parents where table.procs[ppid] != nil {
@@ -37,5 +39,18 @@ public struct ProcessTable: Sendable {
         if members.isEmpty, procs[fg] != nil { members = [fg] }
         let line = members.compactMap { procs[$0]?.args }.joined(separator: " | ")
         return line.isEmpty ? nil : line
+    }
+
+    /// True when some ancestor of `pid` (not `pid` itself) has a command
+    /// line matching `predicate`. Unknown pids have no ancestors.
+    public func hasAncestor(of pid: Int, where predicate: (String) -> Bool) -> Bool {
+        var current = procs[pid]?.ppid
+        var steps = 0
+        while let p = current, p > 1, steps < 64, let proc = procs[p] {
+            if predicate(proc.args) { return true }
+            current = proc.ppid
+            steps += 1
+        }
+        return false
     }
 }

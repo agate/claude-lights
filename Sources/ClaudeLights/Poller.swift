@@ -125,8 +125,13 @@ final class Poller {
         }
         // herdr: its focused agent pane is the candidate; it is on screen only
         // when the frontmost tab is the one running the herdr client.
+        // Skipped unless that pane holds one of our sessions, so a running
+        // herdr with no claude in focus costs no osascript or ps per poll.
         let herdrAgents = Herdr.agents()
-        let herdrFocused = herdrAgents.first(where: \.isFocused)?.paneId
+        let sessionIds = Set(records.compactMap(\.sessionId))
+        let herdrFocused = herdrAgents.first {
+            $0.isFocused && $0.sessionId.map(sessionIds.contains) == true
+        }?.paneId
         var focusedSessionName: String?
         var focusedHerdrPane: String?
         if hasCandidate || herdrFocused != nil, let bundleID = frontmostTerminalBundleID(),

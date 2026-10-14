@@ -14,6 +14,20 @@ final class ProcessTableTests: XCTestCase {
       600     1   600     0 -zsh
     """
 
+    func testHasAncestorWalksParentChain() {
+        let t = ProcessTable.parse("""
+          900     1   900   900 /Users/dev/.local/bin/herdr server
+          910   900   910   920 -zsh
+          920   910   920   920 claude
+          930     1   930   930 -zsh
+          940   930   940   940 claude
+        """)
+        let herdr = { (args: String) in args.hasSuffix("herdr server") }
+        XCTAssertTrue(t.hasAncestor(of: 920, where: herdr))
+        XCTAssertFalse(t.hasAncestor(of: 940, where: herdr))
+        XCTAssertFalse(t.hasAncestor(of: 999, where: herdr)) // unknown pid
+    }
+
     func testIdleShellHasNoCommand() {
         let t = ProcessTable.parse(fixture)
         XCTAssertNil(t.foregroundCommand(shellPid: 100)) // tpgid == own pgid

@@ -27,18 +27,31 @@ final class HerdrMapperTests: XCTestCase {
         XCTAssertEqual(HerdrMapper.parseAgents(#"{"result":{"agents":[{"focused":true}]}}"#), [])
     }
 
-    func testParseClientTtysKeepsOnlyAttachedClients() {
+    func testParseClientTtysKeepsOnlyDefaultSessionClients() {
+        // Only the default server is queried for panes, so only its clients
+        // may be focused; a named-session client shows other panes.
         let ps = """
         ttys029  herdr
-        ttys030  /Users/dev/.local/bin/herdr --session work
-        ttys031  herdr session attach work
+        ttys030  /Users/dev/.local/bin/herdr --session default
+        ttys031  herdr session attach default
+        ttys034  herdr --session=default
+        ttys035  herdr --session work
+        ttys036  herdr --session=work
+        ttys037  herdr session attach work
         ??       /Users/dev/.local/bin/herdr server
         ttys032  herdr agent list
         ttys033  /bin/zsh -c herdr
         ??       herdr
         """
         XCTAssertEqual(HerdrMapper.parseClientTtys(ps),
-                       ["/dev/ttys029", "/dev/ttys030", "/dev/ttys031"])
+                       ["/dev/ttys029", "/dev/ttys030", "/dev/ttys031", "/dev/ttys034"])
+    }
+
+    func testIsServerCommand() {
+        XCTAssertTrue(HerdrMapper.isServerCommand("/Users/dev/.local/bin/herdr server"))
+        XCTAssertTrue(HerdrMapper.isServerCommand("herdr server"))
+        XCTAssertFalse(HerdrMapper.isServerCommand("herdr"))
+        XCTAssertFalse(HerdrMapper.isServerCommand("tmux new -s server"))
     }
 
     func testBuilderMapsSessionToHerdrPaneBySessionId() {

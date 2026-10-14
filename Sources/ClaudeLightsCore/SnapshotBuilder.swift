@@ -124,7 +124,12 @@ public enum SnapshotBuilder {
 
         // herdr sessions are skipped: herdr restores its panes and resumes
         // their claude sessions itself, so saving them would duplicate each.
-        let loose = sessions.filter { $0.tmuxSession == nil && $0.herdrPane == nil && isResumable($0) }
+        // herdrPane needs herdr to report the sessionId; the process tree
+        // catches the rest.
+        let loose = sessions.filter { s in
+            s.tmuxSession == nil && s.herdrPane == nil && isResumable(s)
+                && !procs.hasAncestor(of: s.pid, where: HerdrMapper.isServerCommand)
+        }
             .sorted { ($0.startedAt ?? 0, $0.id) < ($1.startedAt ?? 0, $1.id) }
         guard !loose.isEmpty else { return snaps }
         if let i = snaps.firstIndex(where: { $0.name == SnapshotCodec.looseName }) {

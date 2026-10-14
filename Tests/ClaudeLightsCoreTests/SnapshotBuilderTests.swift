@@ -111,6 +111,20 @@ final class SnapshotBuilderTests: XCTestCase {
                        ["b1"])
     }
 
+    func testHerdrHostedSessionIsSkippedEvenWithoutHerdrPane() {
+        // Without the herdr claude integration herdr reports no sessionId,
+        // so herdrPane is nil; the process tree still shows herdr hosts it.
+        let procs = ProcessTable.parse("""
+          900     1   900   900 herdr server
+          910   900   910   920 -zsh
+          920   910   920   920 claude
+        """)
+        let s = session(id: "h2", pid: 920, cwd: "/x")
+        let snaps = SnapshotBuilder.all(tmuxSessions: [], windows: [], panes: [], sessions: [s],
+                                        procs: procs, home: "/h", baseIndex: 0)
+        XCTAssertTrue(snaps.isEmpty)
+    }
+
     func testNoLooseSnapshotWhenNothingLoose() {
         let snaps = SnapshotBuilder.all(tmuxSessions: [], windows: [], panes: [], sessions: [],
                                         procs: ProcessTable.parse(""), home: "/h", baseIndex: 0)
