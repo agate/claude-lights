@@ -1,7 +1,7 @@
 # Session Snapshots (Save / Restore) Design
 
 Date: 2026-10-14
-Status: draft
+Status: approved
 
 ## Goal
 
