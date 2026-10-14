@@ -27,8 +27,16 @@ enum Shell {
         process.standardOutput = out
         process.standardError = err
         do { try process.run() } catch { return nil }
+        // Drain stderr concurrently so a chatty child can't fill either pipe and deadlock.
+        var errData = Data()
+        let group = DispatchGroup()
+        group.enter()
+        DispatchQueue.global().async {
+            errData = err.fileHandleForReading.readDataToEndOfFile()
+            group.leave()
+        }
         let outData = out.fileHandleForReading.readDataToEndOfFile()
-        let errData = err.fileHandleForReading.readDataToEndOfFile()
+        group.wait()
         process.waitUntilExit()
         return ShellResult(status: process.terminationStatus,
                            stdout: String(decoding: outData, as: UTF8.self),
