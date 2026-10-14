@@ -86,4 +86,23 @@ final class SnapshotStore {
         if let coordError { throw coordError }
         if let writeError { throw writeError }
     }
+
+    /// Removes `<name>.json`, or its evicted iCloud placeholder when only that exists.
+    func delete(name: String) throws {
+        try ensureFolder()
+        let file = SnapshotCodec.fileName(for: name)
+        let real = folder.appendingPathComponent(file)
+        let placeholder = folder.appendingPathComponent(".\(file).icloud")
+        let fm = FileManager.default
+        let url = fm.fileExists(atPath: real.path) || !fm.fileExists(atPath: placeholder.path)
+            ? real : placeholder
+        var coordError: NSError?
+        var deleteError: Error?
+        NSFileCoordinator().coordinate(writingItemAt: url, options: .forDeleting,
+                                       error: &coordError) { u in
+            do { try fm.removeItem(at: u) } catch { deleteError = error }
+        }
+        if let coordError { throw coordError }
+        if let deleteError { throw deleteError }
+    }
 }

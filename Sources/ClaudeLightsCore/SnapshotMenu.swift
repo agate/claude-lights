@@ -20,14 +20,19 @@ public struct SnapshotMenuEntry: Equatable, Sendable {
     /// Snapshot to restore when clicked; nil for "Restore All" and disabled rows.
     public let restoreName: String?
     public let enabled: Bool
+    /// Snapshot file to delete via the ⌥ alternate item; set on every snapshot row.
+    public let deleteName: String?
 
-    public init(title: String, restoreName: String?, enabled: Bool) {
+    public init(title: String, restoreName: String?, enabled: Bool, deleteName: String? = nil) {
         self.title = title; self.restoreName = restoreName; self.enabled = enabled
+        self.deleteName = deleteName
     }
 }
 
 public enum SnapshotMenu {
     public static let restoreAllTitle = "Restore All"
+    /// Disabled last row explaining the ⌥ alternate items.
+    public static let deleteHint = "Hold ⌥ to delete a saved session"
 
     public static func summary(_ file: SnapshotFile, timeZone: TimeZone = .current) -> String {
         let windows = file.session.windows.count
@@ -52,14 +57,17 @@ public enum SnapshotMenu {
             switch l {
             case .ready(let f):
                 let isRunning = running.contains(f.session.name)
+                // A running session's snapshot can still be deleted; only the file goes.
                 return SnapshotMenuEntry(
                     title: summary(f, timeZone: timeZone) + (isRunning ? " (running)" : ""),
-                    restoreName: isRunning ? nil : f.session.name, enabled: !isRunning)
+                    restoreName: isRunning ? nil : f.session.name, enabled: !isRunning,
+                    deleteName: f.session.name)
             case .downloading(let n):
                 return SnapshotMenuEntry(title: "\(n) (downloading from iCloud…)",
-                                         restoreName: nil, enabled: false)
+                                         restoreName: nil, enabled: false, deleteName: n)
             case .unreadable(let n):
-                return SnapshotMenuEntry(title: "\(n) (unreadable)", restoreName: nil, enabled: false)
+                return SnapshotMenuEntry(title: "\(n) (unreadable)", restoreName: nil,
+                                         enabled: false, deleteName: n)
             }
         }
         if listings.contains(where: { if case .ready = $0 { return true }; return false }) {
@@ -67,6 +75,7 @@ public enum SnapshotMenu {
                 title: restoreAllTitle, restoreName: nil,
                 enabled: !restorableNames(listings, running: running).isEmpty))
         }
+        out.append(SnapshotMenuEntry(title: deleteHint, restoreName: nil, enabled: false))
         return out
     }
 

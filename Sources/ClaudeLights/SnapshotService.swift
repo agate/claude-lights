@@ -113,6 +113,16 @@ final class SnapshotService {
         return body
     }
 
+    /// Deletes one saved snapshot file; a running tmux session is not touched.
+    func delete(name: String) -> String {
+        do {
+            try store.delete(name: name)
+            return "Deleted \(name)"
+        } catch {
+            return "Could not delete \(name): \(error.localizedDescription)"
+        }
+    }
+
     /// nil on success, else tmux's error text.
     private func run(_ args: [String], environment: [String: String]? = nil) -> String? {
         guard let r = Tmux.runResult(args, environment: environment) else { return "could not launch tmux" }

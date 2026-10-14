@@ -30,17 +30,27 @@ final class SnapshotMenuTests: XCTestCase {
             "blog — 1 window, 1 claude · saved 10-14 09:00",
             "work — 1 window, 1 claude · saved 10-14 09:00 (running)",
             "Restore All",
+            "Hold ⌥ to delete a saved session",
         ])
-        XCTAssertEqual(e.map(\.enabled), [true, false, true])
-        XCTAssertEqual(e.map(\.restoreName), ["blog", nil, nil])
+        XCTAssertEqual(e.map(\.enabled), [true, false, true, false])
+        XCTAssertEqual(e.map(\.restoreName), ["blog", nil, nil, nil])
+    }
+
+    func testEveryRowIsDeletableEvenWhenRunningOrBroken() {
+        let e = SnapshotMenu.entries([.ready(file("work", windows: 1, claudes: 1)),
+                                      .unreadable("bad"), .downloading("cloud")],
+                                     running: ["work"], timeZone: tz)
+        XCTAssertEqual(e.map(\.deleteName), ["bad", "cloud", "work", nil, nil])
+        XCTAssertEqual(e.last?.title, SnapshotMenu.deleteHint)
     }
 
     // Review Focus 5
     func testUnreadableAndDownloadingAreDisabled() {
         let e = SnapshotMenu.entries([.unreadable("bad"), .downloading("cloud")],
                                      running: [], timeZone: tz)
-        XCTAssertEqual(e.map(\.title), ["bad (unreadable)", "cloud (downloading from iCloud…)"])
-        XCTAssertEqual(e.map(\.enabled), [false, false])
+        XCTAssertEqual(e.map(\.title), ["bad (unreadable)", "cloud (downloading from iCloud…)",
+                                        "Hold ⌥ to delete a saved session"])
+        XCTAssertEqual(e.map(\.enabled), [false, false, false])
     }
 
     func testEmpty() {
@@ -51,7 +61,8 @@ final class SnapshotMenuTests: XCTestCase {
     func testRestoreAllDisabledWhenNothingRestorable() {
         let e = SnapshotMenu.entries([.ready(file("work", windows: 1, claudes: 1))],
                                      running: ["work"], timeZone: tz)
-        XCTAssertEqual(e.last, SnapshotMenuEntry(title: "Restore All", restoreName: nil, enabled: false))
+        XCTAssertEqual(e.dropLast().last,
+                       SnapshotMenuEntry(title: "Restore All", restoreName: nil, enabled: false))
     }
 
     func testRestorableNames() {

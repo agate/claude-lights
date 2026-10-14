@@ -11,6 +11,8 @@ final class StatusItemController: NSObject {
     /// Snapshot names to restore; nil means "Restore All" (resolved off the main thread).
     var onRestore: (([String]?) -> Void)?
     var onMenuWillOpen: (() -> Void)?
+    /// Saved snapshot to delete (the ⌥ alternate of a Restore row).
+    var onDeleteSnapshot: ((String) -> Void)?
     var snapshotMenuEntries: () -> [SnapshotMenuEntry] = { [] }
     var onInstallUpdate: (() -> Void)?
     /// Set when an update is pending, e.g. "v0.3.0"; menu rebuilds on open.
@@ -114,8 +116,11 @@ final class StatusItemController: NSObject {
         let restore = NSMenuItem(title: "Restore", action: nil, keyEquivalent: "")
         restore.image = Self.spacerImage
         let sub = NSMenu()
+        var footerStarted = false
         for entry in snapshotMenuEntries() {
-            if entry.title == SnapshotMenu.restoreAllTitle { sub.addItem(.separator()) }
+            let isFooter = entry.title == SnapshotMenu.restoreAllTitle
+                || entry.title == SnapshotMenu.deleteHint
+            if isFooter, !footerStarted { sub.addItem(.separator()); footerStarted = true }
             let mi = NSMenuItem(title: entry.title,
                                 action: entry.enabled ? #selector(restoreItem(_:)) : nil,
                                 keyEquivalent: "")
@@ -123,6 +128,16 @@ final class StatusItemController: NSObject {
             mi.isEnabled = entry.enabled
             mi.representedObject = entry.restoreName // nil → Restore All
             sub.addItem(mi)
+            if let name = entry.deleteName {
+                // Shown in place of the row above while ⌥ is held.
+                let del = NSMenuItem(title: "Delete “\(name)”…",
+                                     action: #selector(deleteSnapshotItem(_:)), keyEquivalent: "")
+                del.target = self
+                del.representedObject = name
+                del.isAlternate = true
+                del.keyEquivalentModifierMask = .option
+                sub.addItem(del)
+            }
         }
         restore.submenu = sub
         menu.addItem(restore)
@@ -230,6 +245,11 @@ final class StatusItemController: NSObject {
         } else {
             onRestore?(nil)
         }
+    }
+
+    @objc private func deleteSnapshotItem(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        onDeleteSnapshot?(name)
     }
 
     @objc private func showAbout() {

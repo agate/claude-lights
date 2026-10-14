@@ -128,6 +128,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        statusController.onDeleteSnapshot = { [weak self] name in
+            guard let self else { return }
+            // LSUIElement app: activate or the alert opens behind the frontmost app.
+            NSApp.activate(ignoringOtherApps: true)
+            let alert = NSAlert()
+            alert.messageText = "Delete saved session “\(name)”?"
+            alert.informativeText = "Only the saved snapshot is removed. A running tmux session is not affected."
+            alert.addButton(withTitle: "Delete")
+            alert.addButton(withTitle: "Cancel")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+            self.snapshotQueue.async {
+                let body = self.snapshots.delete(name: name)
+                DispatchQueue.main.async {
+                    self.notifier.notifyInfo(title: "Delete Saved Session", body: body)
+                    self.refreshSnapshotEntries()
+                }
+            }
+        }
         statusController.onRestore = { [weak self] names in
             guard let self else { return }
             self.snapshotQueue.async {
