@@ -74,14 +74,16 @@ final class SnapshotService {
                 continue
             }
             do {
-                let snap = try store.read(name: name).session
+                var snap = try store.read(name: name).session
                 guard !snap.windows.isEmpty else {
                     problems.append("\(name): snapshot has no windows")
                     continue
                 }
-                var failure = run(RestorePlan.newSession(snap))
-                if failure == nil {
+                var failure = run(RestorePlan.newSession(snap), environment: Tmux.serverEnvironment)
+                let created = failure == nil
+                if created {
                     if let base = baseIndex() {
+                        snap = RestorePlan.rebasedLoose(snap, baseIndex: base)
                         let cmds = RestorePlan.commands(snap, baseIndex: base)
                         failure = cmds.lazy.compactMap({ self.run($0) }).first
                     } else {
@@ -89,9 +91,13 @@ final class SnapshotService {
                     }
                 }
                 if let error = failure {
-                    // Remove the half-built session so a later Restore is not blocked.
-                    _ = Tmux.run(["kill-session", "-t", "=" + name])
-                    problems.append("\(name): \(error) (rolled back)")
+                    if created {
+                        // Remove the half-built session so a later Restore is not blocked.
+                        _ = Tmux.run(["kill-session", "-t", "=" + name])
+                        problems.append("\(name): \(error) (rolled back)")
+                    } else {
+                        problems.append("\(name): \(error)")
+                    }
                     continue
                 }
                 restored.append(name)
@@ -108,8 +114,8 @@ final class SnapshotService {
     }
 
     /// nil on success, else tmux's error text.
-    private func run(_ args: [String]) -> String? {
-        guard let r = Tmux.runResult(args) else { return "could not launch tmux" }
+    private func run(_ args: [String], environment: [String: String]? = nil) -> String? {
+        guard let r = Tmux.runResult(args, environment: environment) else { return "could not launch tmux" }
         guard r.status != 0 else { return nil }
         let msg = r.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
         return "tmux \(args.first ?? ""): \(msg.isEmpty ? "exit \(r.status)" : msg)"

@@ -19,8 +19,10 @@ enum Shell {
 
     /// Runs a subprocess and returns its exit status, stdout and stderr;
     /// nil only when it cannot be launched.
-    static func runResult(_ executable: String, _ arguments: [String]) -> ShellResult? {
+    static func runResult(_ executable: String, _ arguments: [String],
+                          environment: [String: String]? = nil) -> ShellResult? {
         let process = Process()
+        if let environment { process.environment = environment }
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
         let out = Pipe(), err = Pipe()

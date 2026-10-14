@@ -67,7 +67,9 @@ final class SnapshotStore {
         }
         if let coordError { throw coordError }
         if let readError { throw readError }
-        return try SnapshotCodec.decode(data ?? Data())
+        var file = try SnapshotCodec.decode(data ?? Data())
+        file.session.name = name  // File name wins, so a hand-copied file's menu label and tmux name match.
+        return file
     }
 
     /// Atomic replace of `<name>.json`.
