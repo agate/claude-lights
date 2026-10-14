@@ -8,10 +8,10 @@ final class StatusItemController: NSObject {
     var isBarShown: () -> Bool = { true }
     var onCheckForUpdates: (() -> Void)?
     var onSaveSessions: (() -> Void)?
-    /// Snapshot names to restore (one for an item, all restorable for "Restore All").
-    var onRestore: (([String]) -> Void)?
+    /// Snapshot names to restore; nil means "Restore All" (resolved off the main thread).
+    var onRestore: (([String]?) -> Void)?
+    var onMenuWillOpen: (() -> Void)?
     var snapshotMenuEntries: () -> [SnapshotMenuEntry] = { [] }
-    var restorableNames: () -> [String] = { [] }
     var onInstallUpdate: (() -> Void)?
     /// Set when an update is pending, e.g. "v0.3.0"; menu rebuilds on open.
     var pendingUpdateVersion: String?
@@ -228,7 +228,7 @@ final class StatusItemController: NSObject {
         if let name = sender.representedObject as? String {
             onRestore?([name])
         } else {
-            onRestore?(restorableNames())
+            onRestore?(nil)
         }
     }
 
@@ -263,6 +263,7 @@ extension StatusItemController: NSMenuDelegate {
     // immediately rather than lagging until the next poll.
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
+        onMenuWillOpen?()
         populate(menu, error: lastError)
     }
 }

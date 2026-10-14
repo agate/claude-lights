@@ -5,6 +5,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = SessionStore()
     let poller = Poller()
     private let jumper = Jumper()
+    private let snapshotQueue = DispatchQueue(label: "ClaudeLights.snapshots")
+    /// Main-thread only; recomputed off-main by refreshSnapshotEntries().
+    private var cachedSnapshotEntries: [SnapshotMenuEntry] = [
+        SnapshotMenuEntry(title: "Loading…", restoreName: nil, enabled: false)]
     private lazy var snapshots = SnapshotService(store: SnapshotStore(), jumper: jumper)
     private let notifier = Notifier()
     private let frontmostWatcher = FrontmostWatcher()
@@ -104,24 +108,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.updater.installPendingUpdate()
         }
         updater.startPeriodicChecks()
-        statusController.snapshotMenuEntries = { [weak self] in
-            guard let self else { return [] }
-            switch self.snapshots.listings() {
-            case .success(let listings):
-                return SnapshotMenu.entries(listings, running: self.snapshots.runningSessionNames())
-            case .failure(let error):
-                return [SnapshotMenuEntry(title: error.localizedDescription, restoreName: nil,
-                                          enabled: false)]
-            }
-        }
-        statusController.restorableNames = { [weak self] in
-            guard let self, case .success(let listings) = self.snapshots.listings() else { return [] }
-            return SnapshotMenu.restorableNames(listings, running: self.snapshots.runningSessionNames())
-        }
+        statusController.snapshotMenuEntries = { [weak self] in self?.cachedSnapshotEntries ?? [] }
+        statusController.onMenuWillOpen = { [weak self] in self?.refreshSnapshotEntries() }
+        refreshSnapshotEntries()
         statusController.onSaveSessions = { [weak self] in
             guard let self else { return }
             let sessions = self.store.sessions
-            DispatchQueue.global(qos: .userInitiated).async {
+            self.snapshotQueue.async {
                 let body: String
                 do {
                     _ = try self.snapshots.listings().get() // surfaces iCloudUnavailable
@@ -129,14 +122,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 } catch {
                     body = error.localizedDescription
                 }
-                DispatchQueue.main.async { self.notifier.notifyInfo(title: "Save Sessions", body: body) }
+                DispatchQueue.main.async {
+                    self.notifier.notifyInfo(title: "Save Sessions", body: body)
+                    self.refreshSnapshotEntries()
+                }
             }
         }
         statusController.onRestore = { [weak self] names in
-            guard let self, !names.isEmpty else { return }
-            DispatchQueue.global(qos: .userInitiated).async {
-                let body = self.snapshots.restore(names: names)
-                DispatchQueue.main.async { self.notifier.notifyInfo(title: "Restore", body: body) }
+            guard let self else { return }
+            self.snapshotQueue.async {
+                let targets: [String]
+                if let names {
+                    targets = names
+                } else if case .success(let listings) = self.snapshots.listings() {
+                    targets = SnapshotMenu.restorableNames(listings, running: self.snapshots.runningSessionNames())
+                } else {
+                    targets = []
+                }
+                guard !targets.isEmpty else { return }
+                let body = self.snapshots.restore(names: targets)
+                DispatchQueue.main.async {
+                    self.notifier.notifyInfo(title: "Restore", body: body)
+                    self.refreshSnapshotEntries()
+                }
             }
         }
     }
@@ -191,5 +199,20 @@ extension AppDelegate: UpdaterEngineDelegate {
         alert.messageText = title
         alert.informativeText = text
         alert.runModal()
+    }
+
+    private func refreshSnapshotEntries() {
+        snapshotQueue.async { [weak self] in
+            guard let self else { return }
+            let entries: [SnapshotMenuEntry]
+            switch self.snapshots.listings() {
+            case .success(let listings):
+                entries = SnapshotMenu.entries(listings, running: self.snapshots.runningSessionNames())
+            case .failure(let error):
+                entries = [SnapshotMenuEntry(title: error.localizedDescription, restoreName: nil,
+                                             enabled: false)]
+            }
+            DispatchQueue.main.async { self.cachedSnapshotEntries = entries }
+        }
     }
 }
