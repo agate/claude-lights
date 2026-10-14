@@ -94,21 +94,27 @@ Pure logic, no process or file I/O:
   `foregroundCommand(shellPid:)` — same rule as the script (shell's
   children in the terminal's foreground process group, joined with
   ` | `).
-- `SnapshotBuilder`:
-  - `tmux(name:path:windows:panes:sessions:procs:)` builds a tmux
-    session snapshot from parsed tmux rows, matching Claude panes to the
-    app's `Session`s by tmux pane id (`Session.tmuxPane`) instead of the
-    script's process-tree walk.
-  - `loose(sessions:home:baseIndex:)` builds `claude-loose-sessions`
-    from sessions whose `tmuxSession == nil`. Returns nil when there are
-    none.
-- `RestorePlan`: `commands(for: Snapshot, baseIndex:) -> [[String]]` —
-  the ordered tmux argument lists the script's `restore_session` runs
-  (new-session, move-window, new-window, split-window, select-layout,
-  rename-window, set-option automatic-rename, send-keys, select-pane,
-  resize-pane -Z, select-window). Resume line:
-  `cd <shell-quoted cwd> && claude --resume <shell-quoted id>`.
-  Non-Claude commands are typed with `send-keys -l` and no Enter.
+- `SnapshotBuilder.all(...)`: the single entry point. Builds one snapshot
+  per running tmux session (matching Claude panes to the app's `Session`s
+  by tmux pane id, `Session.tmuxPane`, not a process-tree walk). Loose
+  sessions (`tmuxSession == nil`) become windows of `claude-loose-sessions`;
+  if tmux already runs a session of that name, the loose windows are
+  appended to it rather than replacing it.
+- `RestorePlan`, split in two because `base-index` can only be read once the
+  server is up:
+  - `newSession(_:)` — the `new-session` argument list. Run first.
+  - `commands(_:baseIndex:)` — everything after (move-window, new-window,
+    split-window, select-layout, rename-window, set-option
+    automatic-rename, send-keys, select-pane, resize-pane -Z,
+    select-window). User-supplied values follow a `--` guard. Resume line:
+    `cd <shell-quoted cwd> && claude --resume <shell-quoted id>`.
+    Non-Claude commands are typed with `send-keys -l` and no Enter.
+  - `rebasedLoose(_:baseIndex:)` — renumbers a loose snapshot's windows from
+    the server's base-index (it may have been saved while tmux was down,
+    giving base 0).
+- `SnapshotListing` / `SnapshotMenu` (`SnapshotMenu.swift`): listing of the
+  folder (available / unreadable entries) and the pure mapping from
+  listings + running names to menu entries and the restorable-name list.
 - `SnapshotSummary`: menu label text, e.g.
   `work — 4 windows, 3 claude · saved 10-14 09:00`.
 
@@ -116,20 +122,27 @@ All tmux `-F` formats use `TmuxMapper.sep` (`|CL|`), never tab or `\x1f`.
 
 ### Shell (`ClaudeLights`) — `SnapshotStore.swift`, `SnapshotService.swift`
 
-- `SnapshotStore`: resolves the folder
-  (`scutil --get ComputerName`, `/` replaced with `-`), creates it,
-  lists / reads / writes files. Before reading, calls
+- `SnapshotStore`: resolves the folder (computer name from
+  `SCDynamicStoreCopyComputerName`, `/` replaced with `-`), creates it,
+  lists / reads / writes files. `read(name:)` makes the file name win over
+  the name inside the JSON. Before reading, calls
   `FileManager.startDownloadingUbiquitousItem` for evicted iCloud
   placeholders (`.<name>.json.icloud`) and lists them as available.
 - `SnapshotService`:
   - `saveAll(sessions:)` — runs `tmux list-sessions`, `list-windows -a`,
-    `list-panes -a`, `show-options -wv automatic-rename` per window,
-    `show-options -gv base-index`, and `ps`; builds snapshots via Core;
-    writes one file per **running** tmux session plus loose (if any).
-    Never deletes or touches files for sessions not running now.
-  - `restore(name:)` — skips if `tmux has-session -t =<name>` succeeds;
-    runs the `RestorePlan` commands via `Tmux.run`; then opens a terminal
-    window attached to it.
+    `list-panes -a`, `show-options -gv base-index`, and `ps`; builds
+    snapshots via `SnapshotBuilder.all`; writes one file per **running**
+    tmux session plus loose (if any). Never deletes or touches files for
+    sessions not running now.
+  - `restore(names:)` — "running" means the name is in the `list-sessions`
+    name set. Runs `RestorePlan.newSession` with a prepared server
+    environment (login-shell `PATH`, UTF-8 `LANG`, since a Finder-launched
+    app has neither and the server would pass that on to every shell), reads
+    `base-index`, applies `rebasedLoose`, then runs `commands`. On failure
+    it kills the session only if this restore created it
+    (`kill-session -t =<name>`). Then opens a terminal window attached to it.
+  - Menu entries are cached and refreshed on one serial background queue,
+    so opening the menu never blocks on tmux or iCloud.
 - `Jumper`: extract the window-opening half of `offerToOpenWindow` into
   `openTerminalWindow(attachingTo:)` (no alert) and reuse it.
 

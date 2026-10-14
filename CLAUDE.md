@@ -65,3 +65,6 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   permission is fragile across reboots/rebuilds — jump can silently stop
   focusing tabs until re-granted. Real fix: Developer ID signing + notarize
   (Apple Developer Program). Not done.
+- iCloud Drive access (Save/Restore snapshots) is another TCC (macOS privacy)
+  permission that ad-hoc rebuilds can reset; if denied, Save/Restore show the
+  raw permission error.
