@@ -14,8 +14,10 @@ so it reads clearly regardless of color vision:
 | hollow gray | Just started, nothing yet |
 
 Includes an always-on-top floating light bar, one-click jump to the
-session's tmux window (iTerm2, Apple Terminal, or VS Code), and a
-notification with sound when a session needs you or finishes.
+session's tmux window or [herdr](https://github.com/herdrdev/herdr) pane
+(iTerm2, Apple Terminal, or VS Code), a notification with sound when a
+session needs you or finishes, and Save / Restore of your sessions across
+reboots.
 
 ![Floating light bar — one dot per session: waiting (!), running (spinning gear), answered with a background task (static gear), done (✓), idle seen, just started](assets/screenshot-bar.png)
 
@@ -35,7 +37,12 @@ finishes, and check the menu for the session list:
   red "needs you" light; on older versions a session awaiting your input
   never turns red. The app flags any session running an older version in
   its menu.
-- tmux (optional — needed for click-to-jump)
+- tmux or herdr (optional — needed to jump to the exact window/pane; a
+  Claude session run directly in a terminal tab jumps without either). For
+  herdr, install its Claude integration (`herdr integration install claude`)
+  so herdr reports which pane runs which session. Only the default herdr
+  session is supported.
+- iCloud Drive (optional — needed for Save / Restore)
 
 ## Install
 
@@ -79,7 +86,8 @@ needed once.
 
 Grant the notification permission when asked; the first click-to-jump also
 asks once for permission to control your terminal (iTerm2, Apple Terminal,
-or VS Code).
+or VS Code). Save / Restore need access to iCloud Drive; macOS may ask the
+first time.
 
 ## Usage
 
@@ -95,9 +103,21 @@ or VS Code).
   - It **follows the screen you're working on** (instantly when you switch
     apps) and moves to a remaining screen if you unplug a monitor.
 - **Jump** switches tmux to the session's window/pane and focuses the exact
-  iTerm2 / Apple Terminal tab, or the VS Code window for its folder. If every
-  terminal window is closed, it offers to open a new one attached to the
-  session.
+  iTerm2 / Apple Terminal tab, or the VS Code window for its folder. For a
+  session inside **herdr**, it focuses the session's herdr pane and the tab
+  running herdr. If every terminal window is closed, it offers to open a new
+  one attached to the session (tmux or herdr).
+- **Save Sessions** (menu) records every running tmux session — windows,
+  pane layouts, working directories — and every Claude session in it, plus
+  Claude sessions running outside tmux. Snapshots live in iCloud Drive under
+  `ClaudeLights/sessions/<ComputerName>/`, one file per tmux session.
+  Sessions inside herdr are skipped: herdr restores its own panes and
+  resumes their Claude conversations itself.
+- **Restore ▸** (menu) rebuilds a saved tmux session after a reboot and runs
+  `claude --resume` in each Claude pane. Sessions saved from outside tmux
+  come back as windows of a tmux session named `claude-loose-sessions`.
+  Sessions already running are shown disabled; **Restore All** rebuilds the
+  rest. Hold **⌥ Option** in the submenu to delete a saved snapshot.
 - **Idle sessions** dim from bright to muted green once you've looked at
   them, so unread results stand out.
 - **Notifications** fire (banner + sound) when a session turns red or

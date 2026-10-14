@@ -156,6 +156,15 @@ Swift + AppKit/SwiftUI menu bar app (`LSUIElement`, no Dock icon). Four modules:
   the claude process's own controlling tty *is* that tab's tty, so the same
   tty-matching focuser selects the right iTerm2 / Apple Terminal tab. Only if
   that fails does it fall back to merely activating the terminal app.
+  Sessions inside **herdr** (added 2026-10-14) run on a herdr-owned pty that
+  no terminal tab shows, so the tty is useless. Instead the session is joined
+  to its pane by sessionId from `herdr agent list` (`agent_session.value`,
+  reported by herdr's Claude integration). Jump runs `herdr agent focus
+  <pane>`, then focuses the tab whose tty runs a default-session `herdr`
+  client (found in `ps`). If no client is attached (the herdr server outlives
+  its window), it offers to open a terminal window running `herdr`. A herdr
+  session counts as on screen when the frontmost tab is a herdr client and
+  herdr's focused pane is that session's.
 - **Notify**: on transition *into* red only (no repeats while red persists):
   `UserNotifications` banner + sound. Title: project name. Body: derived
   name + what it is waiting for, extracted from the transcript tail and
@@ -172,6 +181,8 @@ Swift + AppKit/SwiftUI menu bar app (`LSUIElement`, no Dock icon). Four modules:
   block.
 - No sessions → light bar hidden, tray gray.
 - tmux server not running → statuses still shown; jump disabled per session.
+- herdr not running, or its Claude integration missing → the session is
+  treated like a plain terminal session (no pane-level jump).
 - Malformed/unknown JSON fields → gray state, never crash.
 
 ## Testing

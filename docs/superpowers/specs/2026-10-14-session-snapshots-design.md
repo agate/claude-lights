@@ -33,6 +33,11 @@ Once shipped the script is retired; there is no command-line interface.
   transcript under this Mac's `~/.claude/projects/`.
 - **Background sessions (`kind:"bg"`) are not saved** — no window to
   restore. They are already excluded from `Session` lists.
+- **herdr sessions are not saved** (added 2026-10-14) — herdr restores its
+  panes and resumes their Claude sessions itself, so saving them would open
+  each conversation twice. A session counts as herdr's when herdr reports
+  its pane, or when its process has a `herdr server` ancestor (catches
+  panes without herdr's Claude integration).
 
 ## Non-goals
 
