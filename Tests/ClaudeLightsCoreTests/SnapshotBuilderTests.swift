@@ -97,6 +97,20 @@ final class SnapshotBuilderTests: XCTestCase {
         XCTAssertFalse(loose.windows[1].active)
     }
 
+    func testHerdrSessionsAreNotSavedAsLoose() {
+        // herdr restores its own panes and resumes their claude sessions;
+        // saving them too would open each conversation twice on Restore.
+        let herdr = Session(id: "h1", pid: 7, cwd: "/x", projectName: "x", derivedName: "",
+                            light: .green, statusText: "Idle", statusUpdatedAt: nil,
+                            tmuxSession: nil, tmuxWindow: nil, herdrPane: "w5:p1")
+        let bare = session(id: "b1", pid: 8, cwd: "/y")
+        let snaps = SnapshotBuilder.all(tmuxSessions: [], windows: [], panes: [],
+                                        sessions: [herdr, bare],
+                                        procs: ProcessTable.parse(""), home: "/h", baseIndex: 0)
+        XCTAssertEqual(snaps.flatMap(\.windows).flatMap(\.panes).compactMap(\.claude?.sessionId),
+                       ["b1"])
+    }
+
     func testNoLooseSnapshotWhenNothingLoose() {
         let snaps = SnapshotBuilder.all(tmuxSessions: [], windows: [], panes: [], sessions: [],
                                         procs: ProcessTable.parse(""), home: "/h", baseIndex: 0)

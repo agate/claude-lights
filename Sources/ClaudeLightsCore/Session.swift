@@ -25,6 +25,8 @@ public struct Session: Identifiable, Equatable, Sendable {
     /// terminal session this is the terminal tab's own tty; inside tmux it is
     /// the pane pty (use tmux fields for jumping there instead).
     public let tty: String?
+    /// herdr pane id (e.g. "w5:p1") when the session runs inside herdr.
+    public let herdrPane: String?
 
     /// Primary display label: the AI title when available, else the project dir name.
     public var displayName: String { title ?? projectName }
@@ -33,7 +35,8 @@ public struct Session: Identifiable, Equatable, Sendable {
                 light: LightState, statusText: String, statusUpdatedAt: Date?,
                 tmuxSession: String?, tmuxWindow: String?, tmuxPane: String? = nil,
                 waitingFor: String? = nil, title: String? = nil, isOnScreen: Bool = false,
-                version: String? = nil, startedAt: Double? = nil, tty: String? = nil) {
+                version: String? = nil, startedAt: Double? = nil, tty: String? = nil,
+                herdrPane: String? = nil) {
         self.id = id; self.pid = pid; self.cwd = cwd
         self.projectName = projectName; self.derivedName = derivedName
         self.light = light; self.statusText = statusText
@@ -43,6 +46,7 @@ public struct Session: Identifiable, Equatable, Sendable {
         self.waitingFor = waitingFor
         self.title = title; self.isOnScreen = isOnScreen; self.version = version
         self.startedAt = startedAt; self.tty = tty
+        self.herdrPane = herdrPane
     }
 }
 
@@ -59,7 +63,7 @@ public extension Session {
             let age = AgeFormatter.string(from: statusUpdatedAt, now: now)
             if !age.isEmpty { line += " · \(age)" }
         }
-        if tmuxSession == nil { line += " · not in tmux" }
+        if tmuxSession == nil, herdrPane == nil { line += " · not in tmux" }
         return line
     }
 }
@@ -71,7 +75,8 @@ public enum SessionBuilder {
                              seenIds: Set<String> = [],
                              titles: [String: String] = [:],
                              visibleIds: Set<String> = [],
-                             newIds: Set<String> = []) -> [Session] {
+                             newIds: Set<String> = [],
+                             herdrAgents: [HerdrAgent] = []) -> [Session] {
         // A session moved to the background keeps a stale interactive record
         // alongside a live bg record under the same sessionId: group them.
         var groups: [String: [AgentRecord]] = [:]
@@ -115,7 +120,8 @@ public enum SessionBuilder {
                     isOnScreen: visibleIds.contains(id),
                     version: primary.version ?? anchor.version,
                     startedAt: anchor.startedAt,
-                    tty: pidTtys[pid])
+                    tty: pidTtys[pid],
+                    herdrPane: herdrAgents.first { $0.sessionId == id }?.paneId)
             }
             // Stable order by launch time (oldest first), so a session keeps
             // its position for the whole of its life — only its color changes

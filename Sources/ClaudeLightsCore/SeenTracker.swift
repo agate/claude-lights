@@ -43,4 +43,13 @@ public enum SeenTracker {
         }
         return result
     }
+
+    /// Ids of herdr sessions in herdr's focused pane. The caller passes nil
+    /// unless the frontmost terminal tab is a herdr client, mirroring the
+    /// frontmost-tty requirement for tmux.
+    public static func herdrFocusedIds(sessions: [Session],
+                                       focusedPaneId: String?) -> Set<String> {
+        guard let focusedPaneId else { return [] }
+        return Set(sessions.filter { $0.herdrPane == focusedPaneId }.map(\.id))
+    }
 }

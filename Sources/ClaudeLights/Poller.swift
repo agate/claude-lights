@@ -123,10 +123,18 @@ final class Poller {
         let hasCandidate = clients.contains { client in
             activeWindows.contains { $0.hasPrefix(client.sessionName + ":") }
         }
+        // herdr: its focused agent pane is the candidate; it is on screen only
+        // when the frontmost tab is the one running the herdr client.
+        let herdrAgents = Herdr.agents()
+        let herdrFocused = herdrAgents.first(where: \.isFocused)?.paneId
         var focusedSessionName: String?
-        if hasCandidate, let bundleID = frontmostTerminalBundleID(),
+        var focusedHerdrPane: String?
+        if hasCandidate || herdrFocused != nil, let bundleID = frontmostTerminalBundleID(),
            let tty = focusedTerminalTTY(bundleID: bundleID) {
             focusedSessionName = clients.first { $0.tty == tty }?.sessionName
+            if herdrFocused != nil, Herdr.clientTtys().contains(tty) {
+                focusedHerdrPane = herdrFocused
+            }
         }
         // Sessions with no transcript yet (still starting, nothing said).
         var newIds = Set<String>()
@@ -139,7 +147,7 @@ final class Poller {
         // First pass merges twin records (bg + interactive) per sessionId,
         // so visibility and seen sampling use the merged truth.
         let base = SessionBuilder.build(records: records, pidTtys: pidTtys, panes: panes,
-                                        newIds: newIds)
+                                        newIds: newIds, herdrAgents: herdrAgents)
         let all = Set(base.map(\.id))
         let greens = Set(base.filter { $0.light == .green }.map(\.id))
         // On screen means: the focused tmux session, its active window, and
@@ -149,12 +157,13 @@ final class Poller {
                                              focusedSessionName: focusedSessionName,
                                              activeWindows: activeWindows,
                                              activePaneIds: TmuxMapper.activePaneIds(panes))
+            .union(SeenTracker.herdrFocusedIds(sessions: base, focusedPaneId: focusedHerdrPane))
         seen = SeenTracker.update(seen: seen, greens: greens, visible: visible, all: all)
         refreshTitles(records: records, all: all)
 
         let sessions = SessionBuilder.build(records: records, pidTtys: pidTtys, panes: panes,
                                             seenIds: seen, titles: titles, visibleIds: visible,
-                                            newIds: newIds)
+                                            newIds: newIds, herdrAgents: herdrAgents)
         let newlyRed = TransitionDetector.newlyRed(previous: previous, current: sessions)
         let newlyDone = TransitionDetector.newlyDone(previous: previous, current: sessions)
         previous = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0.light) })

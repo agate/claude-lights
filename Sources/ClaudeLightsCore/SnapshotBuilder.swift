@@ -90,7 +90,7 @@ public enum SnapshotBuilder {
     }
 
     /// One snapshot per running tmux session, plus the loose snapshot for
-    /// resumable Claude sessions outside tmux. When a tmux session named
+    /// resumable Claude sessions outside tmux and herdr. When a tmux session named
     /// `claude-loose-sessions` is already running, loose windows are
     /// appended to it instead of producing a second snapshot of that name.
     public static func all(tmuxSessions: [SnapshotTmux.SessionRow],
@@ -122,7 +122,9 @@ public enum SnapshotBuilder {
             return Snapshot(name: row.name, path: row.path, windows: ws)
         }
 
-        let loose = sessions.filter { $0.tmuxSession == nil && isResumable($0) }
+        // herdr sessions are skipped: herdr restores its panes and resumes
+        // their claude sessions itself, so saving them would duplicate each.
+        let loose = sessions.filter { $0.tmuxSession == nil && $0.herdrPane == nil && isResumable($0) }
             .sorted { ($0.startedAt ?? 0, $0.id) < ($1.startedAt ?? 0, $1.id) }
         guard !loose.isEmpty else { return snaps }
         if let i = snaps.firstIndex(where: { $0.name == SnapshotCodec.looseName }) {

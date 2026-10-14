@@ -3,6 +3,10 @@ import ClaudeLightsCore
 
 final class Jumper {
     func jump(to session: Session) {
+        if let pane = session.herdrPane, Herdr.available {
+            jumpToHerdr(pane: pane)
+            return
+        }
         guard Tmux.available,
               let tmuxSession = session.tmuxSession,
               let window = session.tmuxWindow else {
@@ -48,6 +52,15 @@ final class Jumper {
             if focusTab(tty: host.tty) { return }
         }
         activateTerminal()
+    }
+
+    /// herdr: focus the pane inside herdr (switching its workspace/tab), then
+    /// bring forward the terminal tab running a herdr client — claude's own
+    /// tty is a herdr pty that no terminal tab shows.
+    private func jumpToHerdr(pane: String) {
+        Herdr.run(["agent", "focus", pane])
+        for tty in Herdr.clientTtys() where focusTab(tty: tty) { return }
+        fallbackActivate()
     }
 
     /// Focuses the terminal window/tab whose tty matches. Tries iTerm2 then

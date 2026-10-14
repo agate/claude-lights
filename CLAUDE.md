@@ -43,6 +43,11 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   tty (AppleScript). Non-tmux → focus by the session's own tty. VS Code →
   `code <cwd>` (no per-tab tty). Menu rebuilds on open (NSMenuDelegate) so
   toggle checkmarks are live.
+- **herdr:** claude inside herdr has a herdr-owned pty, so its tty matches
+  no terminal tab. Join by sessionId from `herdr agent list`
+  (`agent_session.value`, needs the herdr claude integration); jump =
+  `herdr agent focus <pane>` + focus the tab running the `herdr` client (ps).
+  Save skips herdr sessions — herdr resumes them itself.
 - **Seen/on-screen** = the session's tmux window is active in the client on
   the *frontmost tab* (frontmost-tty via AppleScript), not just any terminal
   frontmost. Dot order is **stable by launch time**, never by state.
