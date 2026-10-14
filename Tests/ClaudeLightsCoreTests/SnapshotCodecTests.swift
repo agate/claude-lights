@@ -60,6 +60,13 @@ final class SnapshotCodecTests: XCTestCase {
         XCTAssertNil(SnapshotCodec.sessionName(fromFileName: ".work.json.icloud"))
     }
 
+    func testNonASCIINameIsPercentEncodedLikeTheOldScript() {
+        // Matches Python's urllib.parse.quote(name, safe="") used by the old script.
+        XCTAssertEqual(SnapshotCodec.fileName(for: "工作"), "%E5%B7%A5%E4%BD%9C.json")
+        XCTAssertEqual(SnapshotCodec.sessionName(fromFileName: "%E5%B7%A5%E4%BD%9C.json"), "工作")
+        XCTAssertEqual(SnapshotCodec.looseName, "claude-loose-sessions")
+    }
+
     func testFolderNameSanitizesSeparators() {
         XCTAssertEqual(SnapshotCodec.folderName(computerName: "Hao's Mac/Pro:2"), "Hao's Mac-Pro-2")
     }

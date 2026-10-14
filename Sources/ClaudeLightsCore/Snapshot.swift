@@ -100,11 +100,9 @@ public enum SnapshotCodec {
     /// Synthetic snapshot holding every Claude session that ran outside tmux.
     public static let looseName = "claude-loose-sessions"
 
-    private static let unreserved: CharacterSet = {
-        var set = CharacterSet.alphanumerics
-        set.insert(charactersIn: "-._~")
-        return set
-    }()
+    /// ASCII-only unreserved set, matching Python's urllib.parse.quote(safe="").
+    private static let unreserved = CharacterSet(
+        charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
 
     public static func encode(_ file: SnapshotFile) throws -> Data {
         let encoder = JSONEncoder()
