@@ -21,7 +21,7 @@ public enum RestorePlan {
                     out.append(["move-window", "-s", "\(s.name):\(baseIndex)", "-t", target])
                 }
                 if startCwd != s.path {
-                    out.append(["send-keys", "-t", target, "cd \(shellQuote(startCwd)) && clear", "Enter"])
+                    out.append(["send-keys", "-t", target, "--", "cd \(shellQuote(startCwd)) && clear", "Enter"])
                 }
             } else {
                 out.append(["new-window", "-d", "-t", target, "-c", startCwd])
@@ -30,18 +30,18 @@ public enum RestorePlan {
                 out.append(["split-window", "-d", "-t", target, "-c", p.cwd])
             }
             let multi = w.panes.count > 1
-            if multi { out.append(["select-layout", "-t", target, w.layout]) }
-            out.append(["rename-window", "-t", target, w.name])
+            if multi { out.append(["select-layout", "-t", target, "--", w.layout]) }
+            out.append(["rename-window", "-t", target, "--", w.name])
             out.append(["set-option", "-w", "-t", target, "automatic-rename",
                         w.automaticRename ? "on" : "off"])
             for p in w.panes {
                 // A lone pane is addressed by its window, so pane-base-index never matters.
                 let pane = multi ? "\(target).\(p.index)" : target
                 if let line = resumeLine(p) {
-                    out.append(["send-keys", "-t", pane, line, "Enter"])
+                    out.append(["send-keys", "-t", pane, "--", line, "Enter"])
                 } else if let cmd = p.command {
                     // Typed but not run: the user reviews it and presses Enter.
-                    out.append(["send-keys", "-t", pane, "-l", cmd])
+                    out.append(["send-keys", "-t", pane, "-l", "--", cmd])
                 }
             }
             if multi, let active = w.panes.first(where: \.active) {
@@ -53,6 +53,15 @@ public enum RestorePlan {
             out.append(["select-window", "-t", "\(s.name):\(active.index)"])
         }
         return out
+    }
+
+    /// A loose snapshot saved while tmux was down carries base-index 0;
+    /// renumber its windows from the server's actual `baseIndex`.
+    public static func rebasedLoose(_ s: Snapshot, baseIndex: Int) -> Snapshot {
+        guard s.name == SnapshotCodec.looseName else { return s }
+        var r = s
+        for i in r.windows.indices { r.windows[i].index = baseIndex + i }
+        return r
     }
 
     public static func resumeLine(_ pane: SnapshotPane) -> String? {

@@ -48,17 +48,17 @@ final class RestorePlanTests: XCTestCase {
         ])
         XCTAssertEqual(RestorePlan.commands(s, baseIndex: 0), [
             ["move-window", "-s", "work:0", "-t", "work:1"],
-            ["send-keys", "-t", "work:1", "cd /src/api && clear", "Enter"],
+            ["send-keys", "-t", "work:1", "--", "cd /src/api && clear", "Enter"],
             ["split-window", "-d", "-t", "work:1", "-c", "/src/api"],
-            ["select-layout", "-t", "work:1", "LAYOUT"],
-            ["rename-window", "-t", "work:1", "api"],
+            ["select-layout", "-t", "work:1", "--", "LAYOUT"],
+            ["rename-window", "-t", "work:1", "--", "api"],
             ["set-option", "-w", "-t", "work:1", "automatic-rename", "off"],
-            ["send-keys", "-t", "work:1.0", "cd /src/api && claude --resume abc", "Enter"],
-            ["send-keys", "-t", "work:1.1", "-l", "npm run dev"],
+            ["send-keys", "-t", "work:1.0", "--", "cd /src/api && claude --resume abc", "Enter"],
+            ["send-keys", "-t", "work:1.1", "-l", "--", "npm run dev"],
             ["select-pane", "-t", "work:1.1"],
             ["resize-pane", "-Z", "-t", "work:1"],
             ["new-window", "-d", "-t", "work:2", "-c", "/src/web"],
-            ["rename-window", "-t", "work:2", "zsh"],
+            ["rename-window", "-t", "work:2", "--", "zsh"],
             ["set-option", "-w", "-t", "work:2", "automatic-rename", "on"],
             ["select-window", "-t", "work:2"],
         ])
@@ -70,7 +70,7 @@ final class RestorePlanTests: XCTestCase {
                            height: 24, active: true, zoomed: false, panes: [pane(0, "/src")]),
         ])
         XCTAssertEqual(RestorePlan.commands(s, baseIndex: 1), [
-            ["rename-window", "-t", "w:1", "a"],
+            ["rename-window", "-t", "w:1", "--", "a"],
             ["set-option", "-w", "-t", "w:1", "automatic-rename", "on"],
             ["select-window", "-t", "w:1"],
         ])
@@ -85,13 +85,38 @@ final class RestorePlanTests: XCTestCase {
                            panes: [pane(0, "/Users/me/a b", active: true, claude: "s1")]),
         ])
         let cmds = RestorePlan.commands(s, baseIndex: 1)
-        XCTAssertTrue(cmds.contains(["send-keys", "-t", "claude-loose-sessions:1",
+        XCTAssertTrue(cmds.contains(["send-keys", "-t", "claude-loose-sessions:1", "--",
                                      "cd '/Users/me/a b' && claude --resume s1", "Enter"]), "\(cmds)")
         XCTAssertFalse(cmds.contains { $0.first == "select-pane" })
         XCTAssertFalse(cmds.contains { $0.contains { $0.hasSuffix(":1.0") } })
         // First window's cwd differs from session path, but the resume line cds itself;
         // the extra "cd && clear" still runs first and is harmless.
-        XCTAssertEqual(cmds.first, ["send-keys", "-t", "claude-loose-sessions:1",
+        XCTAssertEqual(cmds.first, ["send-keys", "-t", "claude-loose-sessions:1", "--",
                                     "cd '/Users/me/a b' && clear", "Enter"])
+    }
+
+    func testDashLeadingNamesAndCommandsAreGuardedByDoubleDash() {
+        let s = Snapshot(name: "w", path: "/src", windows: [
+            SnapshotWindow(index: 1, name: "-zsh", automaticRename: false, layout: "",
+                           width: 80, height: 24, active: true, zoomed: false,
+                           panes: [pane(0, "/src", command: "-v")]),
+        ])
+        let cmds = RestorePlan.commands(s, baseIndex: 1)
+        XCTAssertTrue(cmds.contains(["rename-window", "-t", "w:1", "--", "-zsh"]), "\(cmds)")
+        XCTAssertTrue(cmds.contains(["send-keys", "-t", "w:1", "-l", "--", "-v"]), "\(cmds)")
+    }
+
+    func testRebasedLooseRenumbersFromBase() {
+        func win(_ i: Int) -> SnapshotWindow {
+            SnapshotWindow(index: i, name: "n\(i)", automaticRename: false, layout: "",
+                           width: 80, height: 24, active: i == 0, zoomed: false,
+                           panes: [pane(0, "/x")])
+        }
+        let loose = Snapshot(name: SnapshotCodec.looseName, path: "/x", windows: [win(0), win(1)])
+        let r = RestorePlan.rebasedLoose(loose, baseIndex: 1)
+        XCTAssertEqual(r.windows.map(\.index), [1, 2])
+        XCTAssertEqual(r.windows.map(\.name), ["n0", "n1"])
+        let other = Snapshot(name: "work", path: "/x", windows: [win(0), win(1)])
+        XCTAssertEqual(RestorePlan.rebasedLoose(other, baseIndex: 1), other)
     }
 }
