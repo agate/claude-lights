@@ -25,9 +25,9 @@ final class SnapshotService {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? "")
     }
 
-    /// Writes one file per running tmux session plus the loose snapshot.
-    /// Files of sessions not running now are left untouched.
-    func saveAll(sessions: [Session]) -> String {
+    /// Snapshots of every running tmux session plus the loose one. When tmux
+    /// is not running, only the loose snapshot (if any) is returned.
+    func build(sessions: [Session]) -> (snaps: [Snapshot], tmuxRunning: Bool) {
         let tmuxOut = Tmux.run(["list-sessions", "-F", SnapshotTmux.sessionsFormat])
         let tmuxRunning = tmuxOut != nil
         let snaps = SnapshotBuilder.all(
@@ -40,12 +40,23 @@ final class SnapshotService {
             procs: ProcessTable.parse(Shell.run("/bin/ps", ProcessTable.psArguments) ?? ""),
             home: NSHomeDirectory(),
             baseIndex: tmuxRunning ? (baseIndex() ?? 0) : 0)
+        return (snaps, tmuxRunning)
+    }
+
+    func write(_ snap: Snapshot, savedAt: String) throws {
+        try store.write(SnapshotFile(savedAt: savedAt, session: snap))
+    }
+
+    /// Writes one file per running tmux session plus the loose snapshot.
+    /// Files of sessions not running now are left untouched.
+    func saveAll(sessions: [Session]) -> String {
+        let (snaps, tmuxRunning) = build(sessions: sessions)
         let savedAt = SnapshotCodec.timestamp(Date())
         var tmuxCount = 0, looseCount = 0
         var failures: [String] = []
         for snap in snaps {
             do {
-                try store.write(SnapshotFile(savedAt: savedAt, session: snap))
+                try write(snap, savedAt: savedAt)
                 if snap.name == SnapshotCodec.looseName {
                     looseCount = snap.windows.count
                 } else {

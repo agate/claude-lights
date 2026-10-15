@@ -118,6 +118,11 @@ first time.
   come back as windows of a tmux session named `claude-loose-sessions`.
   Sessions already running are shown disabled; **Restore All** rebuilds the
   rest. Hold **⌥ Option** in the submenu to delete a saved snapshot.
+- **Restore ▸ Auto Saved ▸** holds snapshots taken automatically — on by
+  default — whenever your sessions' windows, panes or Claude sessions change,
+  so a power loss or crash still leaves something to restore. They live in
+  an `auto-saved/` subfolder and never overwrite a manual save. Auto-save
+  never notifies; its errors go to `~/Library/Logs/ClaudeLights/autosave.log`.
 - **Idle sessions** dim from bright to muted green once you've looked at
   them, so unread results stand out.
 - **Notifications** fire (banner + sound) when a session turns red or

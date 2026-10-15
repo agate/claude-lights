@@ -64,6 +64,12 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   `claude-loose-sessions` and restored into a tmux session of that name.
   Save only rewrites files of sessions running now. Single-pane windows are
   targeted by window (not `.0`) so `pane-base-index` doesn't matter.
+- **Auto-save** (on by default, toggle in Restore ▸ Auto Saved): every 15 s
+  builds the same snapshots into `.../<ComputerName>/auto-saved/`, written
+  only when the structure changed *and* held for two ticks (so a shutdown
+  tearing panes down never overwrites a good file); claude `status` is
+  ignored. Silent — errors only go to `~/Library/Logs/ClaudeLights/autosave.log`
+  (1 MB, one `.1` rotation), each distinct error logged once.
 
 ## Open issue
 - App is **ad-hoc signed** (no Team ID). macOS Automation (AppleScript)

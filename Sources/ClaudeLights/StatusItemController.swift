@@ -14,6 +14,12 @@ final class StatusItemController: NSObject {
     /// Saved snapshot to delete (the ⌥ alternate of a Restore row).
     var onDeleteSnapshot: ((String) -> Void)?
     var snapshotMenuEntries: () -> [SnapshotMenuEntry] = { [] }
+    /// Same as the three above, for the Restore ▸ Auto Saved submenu.
+    var onRestoreAuto: (([String]?) -> Void)?
+    var onDeleteAutoSnapshot: ((String) -> Void)?
+    var autoSnapshotMenuEntries: () -> [SnapshotMenuEntry] = { [] }
+    var isAutoSaveOn: () -> Bool = { true }
+    var onToggleAutoSave: (() -> Void)?
     var onInstallUpdate: (() -> Void)?
     /// Set when an update is pending, e.g. "v0.3.0"; menu rebuilds on open.
     var pendingUpdateVersion: String?
@@ -116,29 +122,23 @@ final class StatusItemController: NSObject {
         let restore = NSMenuItem(title: "Restore", action: nil, keyEquivalent: "")
         restore.image = Self.spacerImage
         let sub = NSMenu()
-        var footerStarted = false
-        for entry in snapshotMenuEntries() {
-            let isFooter = entry.title == SnapshotMenu.restoreAllTitle
-                || entry.title == SnapshotMenu.deleteHint
-            if isFooter, !footerStarted { sub.addItem(.separator()); footerStarted = true }
-            let mi = NSMenuItem(title: entry.title,
-                                action: entry.enabled ? #selector(restoreItem(_:)) : nil,
-                                keyEquivalent: "")
-            mi.target = entry.enabled ? self : nil
-            mi.isEnabled = entry.enabled
-            mi.representedObject = entry.restoreName // nil → Restore All
-            sub.addItem(mi)
-            if let name = entry.deleteName {
-                // Shown in place of the row above while ⌥ is held.
-                let del = NSMenuItem(title: "Delete “\(name)”…",
-                                     action: #selector(deleteSnapshotItem(_:)), keyEquivalent: "")
-                del.target = self
-                del.representedObject = name
-                del.isAlternate = true
-                del.keyEquivalentModifierMask = .option
-                sub.addItem(del)
-            }
-        }
+        let auto = NSMenuItem(title: "Auto Saved", action: nil, keyEquivalent: "")
+        let autoSub = NSMenu()
+        let autoToggle = NSMenuItem(title: "Auto Save", action: #selector(toggleAutoSave),
+                                    keyEquivalent: "")
+        autoToggle.target = self
+        autoToggle.state = isAutoSaveOn() ? .on : .off
+        autoSub.addItem(autoToggle)
+        autoSub.addItem(.separator())
+        addSnapshotEntries(autoSnapshotMenuEntries(), to: autoSub,
+                           restore: #selector(restoreAutoItem(_:)),
+                           delete: #selector(deleteAutoSnapshotItem(_:)))
+        auto.submenu = autoSub
+        sub.addItem(auto)
+        sub.addItem(.separator())
+        addSnapshotEntries(snapshotMenuEntries(), to: sub,
+                           restore: #selector(restoreItem(_:)),
+                           delete: #selector(deleteSnapshotItem(_:)))
         restore.submenu = sub
         menu.addItem(restore)
         menu.addItem(.separator())
@@ -217,6 +217,33 @@ final class StatusItemController: NSObject {
     private static let spacerImage = NSImage(size: NSSize(width: 18, height: 18),
                                              flipped: false) { _ in true }
 
+    /// Snapshot rows, each with a ⌥ delete alternate, then the footer.
+    private func addSnapshotEntries(_ entries: [SnapshotMenuEntry], to sub: NSMenu,
+                                    restore: Selector, delete: Selector) {
+        var footerStarted = false
+        for entry in entries {
+            let isFooter = entry.title == SnapshotMenu.restoreAllTitle
+                || entry.title == SnapshotMenu.deleteHint
+            if isFooter, !footerStarted { sub.addItem(.separator()); footerStarted = true }
+            let mi = NSMenuItem(title: entry.title,
+                                action: entry.enabled ? restore : nil,
+                                keyEquivalent: "")
+            mi.target = entry.enabled ? self : nil
+            mi.isEnabled = entry.enabled
+            mi.representedObject = entry.restoreName // nil → Restore All
+            sub.addItem(mi)
+            if let name = entry.deleteName {
+                // Shown in place of the row above while ⌥ is held.
+                let del = NSMenuItem(title: "Delete “\(name)”…", action: delete, keyEquivalent: "")
+                del.target = self
+                del.representedObject = name
+                del.isAlternate = true
+                del.keyEquivalentModifierMask = .option
+                sub.addItem(del)
+            }
+        }
+    }
+
     private func disabledItem(_ title: String, indented: Bool = false) -> NSMenuItem {
         let mi = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         mi.isEnabled = false
@@ -251,6 +278,17 @@ final class StatusItemController: NSObject {
         guard let name = sender.representedObject as? String else { return }
         onDeleteSnapshot?(name)
     }
+
+    @objc private func restoreAutoItem(_ sender: NSMenuItem) {
+        onRestoreAuto?((sender.representedObject as? String).map { [$0] })
+    }
+
+    @objc private func deleteAutoSnapshotItem(_ sender: NSMenuItem) {
+        guard let name = sender.representedObject as? String else { return }
+        onDeleteAutoSnapshot?(name)
+    }
+
+    @objc private func toggleAutoSave() { onToggleAutoSave?() }
 
     @objc private func showAbout() {
         // LSUIElement apps have no Dock presence; activate or the panel

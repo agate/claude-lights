@@ -9,7 +9,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Main-thread only; recomputed off-main by refreshSnapshotEntries().
     private var cachedSnapshotEntries: [SnapshotMenuEntry] = [
         SnapshotMenuEntry(title: "Loading…", restoreName: nil, enabled: false)]
+    private var cachedAutoSnapshotEntries: [SnapshotMenuEntry] = [
+        SnapshotMenuEntry(title: "Loading…", restoreName: nil, enabled: false)]
     private lazy var snapshots = SnapshotService(store: SnapshotStore(), jumper: jumper)
+    /// Written by the auto-save timer; kept apart so it never overwrites a manual save.
+    private lazy var autoSnapshots = SnapshotService(
+        store: SnapshotStore(subfolder: "auto-saved"), jumper: jumper)
+    private static let autoSaveKey = "autoSaveSessions"
+    private static let autoSaveInterval: TimeInterval = 15
+    /// snapshotQueue only.
+    private var autoSaveTracker = AutoSaveTracker()
+    /// snapshotQueue only; last error logged per snapshot name, so a lasting
+    /// failure is logged once, not every tick.
+    private var autoSaveLastErrors: [String: String] = [:]
+    private let autoSaveLog = ErrorLog(fileName: "autosave.log")
+    private var autoSaveTimer: DispatchSourceTimer?
     private let notifier = Notifier()
     private let frontmostWatcher = FrontmostWatcher()
     private let updater: UpdaterEngine = GitHubUpdater()
@@ -130,40 +144,102 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         statusController.onDeleteSnapshot = { [weak self] name in
             guard let self else { return }
-            // LSUIElement app: activate or the alert opens behind the frontmost app.
-            NSApp.activate(ignoringOtherApps: true)
-            let alert = NSAlert()
-            alert.messageText = "Delete saved session “\(name)”?"
-            alert.informativeText = "Only the saved snapshot is removed. A running tmux session is not affected."
-            alert.addButton(withTitle: "Delete")
-            alert.addButton(withTitle: "Cancel")
-            guard alert.runModal() == .alertFirstButtonReturn else { return }
-            self.snapshotQueue.async {
-                let body = self.snapshots.delete(name: name)
-                DispatchQueue.main.async {
-                    self.notifier.notifyInfo(title: "Delete Saved Session", body: body)
-                    self.refreshSnapshotEntries()
-                }
-            }
+            self.confirmDelete(name: name, from: self.snapshots)
         }
         statusController.onRestore = { [weak self] names in
             guard let self else { return }
-            self.snapshotQueue.async {
-                let targets: [String]
-                if let names {
-                    targets = names
-                } else if case .success(let listings) = self.snapshots.listings() {
-                    targets = SnapshotMenu.restorableNames(listings, running: self.snapshots.runningSessionNames())
-                } else {
-                    targets = []
-                }
-                guard !targets.isEmpty else { return }
-                let body = self.snapshots.restore(names: targets)
-                DispatchQueue.main.async {
-                    self.notifier.notifyInfo(title: "Restore", body: body)
-                    self.refreshSnapshotEntries()
+            self.restore(names: names, from: self.snapshots)
+        }
+        statusController.autoSnapshotMenuEntries = { [weak self] in
+            self?.cachedAutoSnapshotEntries ?? []
+        }
+        statusController.onDeleteAutoSnapshot = { [weak self] name in
+            guard let self else { return }
+            self.confirmDelete(name: name, from: self.autoSnapshots)
+        }
+        statusController.onRestoreAuto = { [weak self] names in
+            guard let self else { return }
+            self.restore(names: names, from: self.autoSnapshots)
+        }
+        UserDefaults.standard.register(defaults: [Self.autoSaveKey: true])
+        statusController.isAutoSaveOn = { UserDefaults.standard.bool(forKey: Self.autoSaveKey) }
+        statusController.onToggleAutoSave = { [weak self] in
+            let on = !UserDefaults.standard.bool(forKey: Self.autoSaveKey)
+            UserDefaults.standard.set(on, forKey: Self.autoSaveKey)
+            if on { self?.autoSaveTick() }
+        }
+        // Dispatch timer, like the Poller's: a main-run-loop Timer gets
+        // stretched by App Nap while the app sits in the background.
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + Self.autoSaveInterval, repeating: Self.autoSaveInterval)
+        timer.setEventHandler { [weak self] in self?.autoSaveTick() }
+        timer.resume()
+        autoSaveTimer = timer
+    }
+
+    private func confirmDelete(name: String, from service: SnapshotService) {
+        // LSUIElement app: activate or the alert opens behind the frontmost app.
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Delete saved session “\(name)”?"
+        alert.informativeText = "Only the saved snapshot is removed. A running tmux session is not affected."
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        snapshotQueue.async {
+            let body = service.delete(name: name)
+            if service === self.autoSnapshots { self.autoSaveTracker.forget(name) }
+            DispatchQueue.main.async {
+                self.notifier.notifyInfo(title: "Delete Saved Session", body: body)
+                self.refreshSnapshotEntries()
+            }
+        }
+    }
+
+    /// nil names means "Restore All" of that store.
+    private func restore(names: [String]?, from service: SnapshotService) {
+        snapshotQueue.async {
+            let targets: [String]
+            if let names {
+                targets = names
+            } else if case .success(let listings) = service.listings() {
+                targets = SnapshotMenu.restorableNames(listings, running: service.runningSessionNames())
+            } else {
+                targets = []
+            }
+            guard !targets.isEmpty else { return }
+            let body = service.restore(names: targets)
+            DispatchQueue.main.async {
+                self.notifier.notifyInfo(title: "Restore", body: body)
+                self.refreshSnapshotEntries()
+            }
+        }
+    }
+
+    /// Writes changed, settled snapshots to the auto-saved store. Silent:
+    /// failures go to ~/Library/Logs/ClaudeLights/autosave.log only.
+    private func autoSaveTick() {
+        guard UserDefaults.standard.bool(forKey: Self.autoSaveKey) else { return }
+        let sessions = store.sessions
+        snapshotQueue.async { [weak self] in
+            guard let self else { return }
+            let due = self.autoSaveTracker.due(self.autoSnapshots.build(sessions: sessions).snaps)
+            guard !due.isEmpty else { return }
+            let savedAt = SnapshotCodec.timestamp(Date())
+            for snap in due {
+                do {
+                    try self.autoSnapshots.write(snap, savedAt: savedAt)
+                    self.autoSaveTracker.markWritten(snap)
+                    self.autoSaveLastErrors[snap.name] = nil
+                } catch {
+                    let message = error.localizedDescription
+                    if self.autoSaveLastErrors[snap.name] != message {
+                        self.autoSaveLastErrors[snap.name] = message
+                        self.autoSaveLog.log("\(snap.name): \(message)")
+                    }
                 }
             }
+            DispatchQueue.main.async { self.refreshSnapshotEntries() }
         }
     }
 
@@ -222,15 +298,24 @@ extension AppDelegate: UpdaterEngineDelegate {
     private func refreshSnapshotEntries() {
         snapshotQueue.async { [weak self] in
             guard let self else { return }
-            let entries: [SnapshotMenuEntry]
-            switch self.snapshots.listings() {
-            case .success(let listings):
-                entries = SnapshotMenu.entries(listings, running: self.snapshots.runningSessionNames())
-            case .failure(let error):
-                entries = [SnapshotMenuEntry(title: error.localizedDescription, restoreName: nil,
-                                             enabled: false)]
+            let running = self.snapshots.runningSessionNames()
+            let entries = Self.menuEntries(self.snapshots, running: running)
+            let autoEntries = Self.menuEntries(self.autoSnapshots, running: running)
+            DispatchQueue.main.async {
+                self.cachedSnapshotEntries = entries
+                self.cachedAutoSnapshotEntries = autoEntries
             }
-            DispatchQueue.main.async { self.cachedSnapshotEntries = entries }
+        }
+    }
+
+    private static func menuEntries(_ service: SnapshotService,
+                                    running: Set<String>) -> [SnapshotMenuEntry] {
+        switch service.listings() {
+        case .success(let listings):
+            return SnapshotMenu.entries(listings, running: running)
+        case .failure(let error):
+            return [SnapshotMenuEntry(title: error.localizedDescription, restoreName: nil,
+                                      enabled: false)]
         }
     }
 }

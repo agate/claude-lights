@@ -21,12 +21,17 @@ final class SnapshotStore {
     private let cloudDocs: URL
     let folder: URL
 
+    /// `subfolder` (e.g. "auto-saved") nests a separate store inside this Mac's
+    /// folder; the parent's `list()` ignores it, since it is not a `.json` file.
     init(cloudDocs: URL = SnapshotStore.defaultCloudDocs,
-         computerName: String = SnapshotStore.currentComputerName()) {
+         computerName: String = SnapshotStore.currentComputerName(),
+         subfolder: String? = nil) {
         self.cloudDocs = cloudDocs
-        folder = cloudDocs.appendingPathComponent("ClaudeLights/sessions", isDirectory: true)
+        var folder = cloudDocs.appendingPathComponent("ClaudeLights/sessions", isDirectory: true)
             .appendingPathComponent(SnapshotCodec.folderName(computerName: computerName),
                                     isDirectory: true)
+        if let subfolder { folder.appendPathComponent(subfolder, isDirectory: true) }
+        self.folder = folder
     }
 
     private func ensureFolder() throws {
