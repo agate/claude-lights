@@ -79,3 +79,21 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
 - iCloud Drive access (Save/Restore snapshots) is another TCC (macOS privacy)
   permission that ad-hoc rebuilds can reset; if denied, Save/Restore show the
   raw permission error.
+
+## Website (`site/`)
+- `site/` is the product page, served at https://honghao.me/claude-lights/ by
+  `.github/workflows/site.yml` (GitHub Pages, project page under the
+  agate.github.io custom domain). Plain static HTML + `style.css`, no build.
+- It follows the honghao.me style rules — read `CLAUDE.md` in
+  agate/agate.github.io (`~/workspaces/honghao.me/CLAUDE.md`) before editing:
+  isometric line art, Instrument Serif / Inter / Noto Serif SC / Noto Sans SC /
+  JetBrains Mono, hairline rules, and every visible string in both
+  `lang="en"` and `lang="zh"` (EN / 中 toggle; `localStorage` key `lang` is
+  shared with honghao.me).
+- Illustrations: `python3 scripts/gen_site_art.py` writes `site/art/*.svg`;
+  never edit those by hand. State colors match the app (Okabe-Ito vermillion
+  `#d55e00`, amber `#e69f00`, bluish-green `#009e73`).
+- Screenshot/video slots are `.placeholder` boxes marked `<!-- PLACEHOLDER -->`.
+  Put media in `site/media/` and swap the box for `<img>` / `<video>`.
+- The "Why I built it" section is the author's own reasoning — keep its
+  substance; don't rewrite it into marketing copy.

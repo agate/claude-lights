@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Claude Lights</title>
+    <meta name="description" content="Traffic lights in your macOS menu bar for every Claude Code session — see who's waiting, working, or done without watching terminals." />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&family=JetBrains+Mono&family=Noto+Sans+SC:wght@400;500&family=Noto+Serif+SC:wght@400;600&display=swap"
+    />
+    <script>
+      // Same mechanism as honghao.me: ?lang= wins, then the saved choice (shared across honghao.me), then the browser.
+      (function () {
+        var lang = new URLSearchParams(location.search).get('lang');
+        if (lang !== 'en' && lang !== 'zh') {
+          try {
+            lang = localStorage.getItem('lang');
+          } catch (e) {}
+        }
+        if (lang !== 'en' && lang !== 'zh') {
+          lang = /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
+        }
+        document.documentElement.dataset.lang = lang;
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+      })();
+    </script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="wrap">
+      <nav class="mono">
+        <a href="./" class="home">Claude Lights</a>
+        <div class="links">
+          <a href="#why" class="hide-sm"><span lang="en">Why</span><span lang="zh">为什么</span></a>
+          <a href="#states" class="hide-sm"><span lang="en">States</span><span lang="zh">状态</span></a>
+          <a href="#install"><span lang="en">Install</span><span lang="zh">安装</span></a>
+          <a href="https://github.com/agate/claude-lights">GitHub</a>
+          <span class="toggle" role="group" aria-label="Language">
+            <button type="button" data-set-lang="en">EN</button>
+            <button type="button" data-set-lang="zh">中</button>
+          </span>
+        </div>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="mono">
+          <span lang="en">macOS menu bar app · for Claude Code · free and open source</span>
+          <span lang="zh">macOS 菜单栏小工具 · 给 Claude Code 用 · 免费开源</span>
+        </div>
+        <h1 lang="en">Know which Claude needs you,<br /><em>without watching terminals.</em></h1>
+        <h1 lang="zh">不用盯着终端，<br />也知道哪个 Claude 在等你。</h1>
+        <p class="lede" lang="en">
+          Claude Lights turns every Claude Code session on your Mac into one status light — waiting for you, working,
+          or done. Click a light and you're in that session's terminal.
+        </p>
+        <p class="lede" lang="zh">
+          Claude Lights 把你 Mac 上的每个 Claude Code 会话变成一盏状态灯：在等你、在干活、已完成。点一下灯，就直接跳到那个会话的终端。
+        </p>
+        <div class="cta">
+          <a class="btn solid" href="https://github.com/agate/claude-lights/releases/latest">
+            <span lang="en">Download for macOS</span><span lang="zh">下载 macOS 版</span>
+          </a>
+          <a class="btn" href="https://github.com/agate/claude-lights">
+            <span lang="en">View on GitHub</span><span lang="zh">在 GitHub 上查看</span>
+          </a>
+          <span class="mono">v0.6.1 · macOS 13+ · Apple Silicon + Intel</span>
+        </div>
+        <figure class="hero-art">
+          <img src="art/hero.svg" width="640" height="300" alt="" />
+          <figcaption class="mono">
+            <span lang="en">Fig. 1 — The menu bar dot shows the most urgent state. The floating bar has one light per session.</span>
+            <span lang="zh">图 1 — 菜单栏的小点显示最紧急的状态。悬浮灯条上，每个会话一盏灯。</span>
+          </figcaption>
+        </figure>
+        <figure class="demo">
+          <video src="media/demo.mp4" poster="media/demo-poster.jpg" width="1136" height="880" autoplay muted loop playsinline controls preload="metadata" aria-label="Demo: hovering lights for details, clicking to jump to tmux windows, and sessions settling from waiting and working to done"></video>
+          <figcaption class="mono">
+            <span lang="en">Demo — hover a light for details, click it to jump to that session's tmux window, watch states settle as work finishes.</span>
+            <span lang="zh">演示 — 鼠标悬停看详情，点灯跳到那个会话的 tmux 窗口，看着状态随工作完成而变化。</span>
+          </figcaption>
+        </figure>
+      </section>
+
+      <!-- 01 Why -->
+      <section class="sec" id="why">
+        <div class="mono num">01</div>
+        <div>
+          <h2><span lang="en">Why I built it</span><span lang="zh">我为什么做它</span></h2>
+
+          <div class="prose" lang="en">
+            <p>
+              There are already plenty of tools for running many Claude Code sessions at once. Herdr is one. Claude Code
+              itself has agents and can list everything that's running. I like Herdr, and Claude Lights supports it.
+            </p>
+            <p>
+              But these tools all show their status in the same place: inside a terminal. Herdr runs in a terminal, so
+              its status only shows up there. The moment you switch to a browser to work on a web page, the terminal is
+              covered and you can't see what your sessions are doing.
+            </p>
+            <p>
+              Claude Lights lives one level up, on the desktop. Its light bar stays always on top and takes almost no
+              screen space. Whatever you're doing — even working in a browser — you see when a session changes state, and
+              you get a notification when one needs you.
+            </p>
+            <p>
+              It also fits how I work. To me, tmux is a great platform: anything I need can be added on top of it. When I
+              started Claude Lights, Herdr didn't exist yet. So Claude Lights isn't another place to move into. It's a
+              small add-on that runs on your system, next to the tools you already use. As a standalone add-on, I think it
+              more than holds its own.
+            </p>
+          </div>
+
+          <div class="prose" lang="zh">
+            <p>
+              现在已经有很多工具可以同时管理一堆 Claude Code 会话。比如 Herdr；Claude Code 自己也有 Agent，能把所有正在跑的东西列出来。我是支持 Herdr 的，Claude Lights 也支持它。
+            </p>
+            <p>
+              但这些工具都把状态显示在同一个地方：终端里。Herdr 本质上是跑在终端里的，所以它的状态也只显示在终端里。你一切到浏览器去做网页，终端就被挡住了，看不到各个会话在干什么。
+            </p>
+            <p>
+              Claude Lights 待在更高一层：桌面上。它的灯条始终显示在最上面，几乎不占屏幕空间。不管你在做什么，哪怕是在浏览器里做网页，会话状态一变你就能看到；有会话在等你，你还会收到通知。
+            </p>
+            <p>
+              这也符合我的工作习惯。在我看来，tmux 是一个非常好的技术平台，需要什么都可以往上加。而且我开始做这个项目的时候，Herdr 还没有出来。所以 Claude Lights 不是又一个让你搬进去的地方，而是一个独立运行在系统上的小插件，待在你已有的工具旁边。作为一个独立的系统插件，我觉得它依然非常有竞争力。
+            </p>
+          </div>
+
+          <div class="compare">
+            <figure>
+              <img src="art/hidden.svg" width="360" height="260" alt="" />
+              <figcaption>
+                <b><span lang="en">Status inside a terminal</span><span lang="zh">状态在终端里</span></b>
+                <span class="mono">
+                  <span lang="en">Switch to the browser and the terminal — with its status — is covered.</span>
+                  <span lang="zh">一切到浏览器，终端和里面的状态就被挡住了。</span>
+                </span>
+              </figcaption>
+            </figure>
+            <figure>
+              <img src="art/floating.svg" width="360" height="260" alt="" />
+              <figcaption>
+                <b><span lang="en">Status on the desktop</span><span lang="zh">状态在桌面上</span></b>
+                <span class="mono">
+                  <span lang="en">An always-on-top bar and notifications stay in view, using almost no screen space.</span>
+                  <span lang="zh">始终置顶的灯条和通知一直看得见，几乎不占屏幕。</span>
+                </span>
+              </figcaption>
+            </figure>
+          </div>
+
+          <p class="note mono">
+            <span lang="en">Using Herdr? Click a light and Claude Lights focuses that session's Herdr pane. Using tmux? It switches to the exact window and pane.</span>
+            <span lang="zh">在用 Herdr？点一下灯，就会切到那个会话所在的 Herdr 窗格。在用 tmux？会直接切到对应的窗口和窗格。</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- 02 States -->
+      <section class="sec" id="states">
+        <div class="mono num">02</div>
+        <div>
+          <h2><span lang="en">What the lights mean</span><span lang="zh">每种灯是什么意思</span></h2>
+          <p class="intro">
+            <span lang="en">Each state is shown twice — a colorblind-safe color and a glyph — so it reads clearly whatever your color vision.</span>
+            <span lang="zh">每种状态都用两种方式表示：色盲也能分清的颜色，加一个符号。不管你怎么看颜色，都能认出来。</span>
+          </p>
+          <div class="states">
+            <div class="state">
+              <i class="dot red">!</i>
+              <b><span lang="en">Waiting for you</span><span lang="zh">在等你</span></b>
+              <span><span lang="en">Needs input or a permission approval.</span><span lang="zh">需要你输入，或者批准一个权限。</span></span>
+            </div>
+            <div class="state">
+              <i class="dot amber spin">⚙</i>
+              <b><span lang="en">Running</span><span lang="zh">在干活</span></b>
+              <span><span lang="en">Claude is working.</span><span lang="zh">Claude 正在工作。</span></span>
+            </div>
+            <div class="state">
+              <i class="dot green">✓</i>
+              <b><span lang="en">Done</span><span lang="zh">已完成</span></b>
+              <span><span lang="en">Finished, and you haven't looked yet.</span><span lang="zh">做完了，你还没看。</span></span>
+            </div>
+            <div class="state">
+              <i class="dot green">⚙</i>
+              <b><span lang="en">Answered</span><span lang="zh">已回复</span></b>
+              <span><span lang="en">Replied, but a background task is still running.</span><span lang="zh">已经回复了，但后台任务还在跑。</span></span>
+            </div>
+            <div class="state">
+              <i class="dot gray"></i>
+              <b><span lang="en">Idle</span><span lang="zh">空闲</span></b>
+              <span><span lang="en">You've already seen it.</span><span lang="zh">你已经看过了。</span></span>
+            </div>
+            <div class="state">
+              <i class="dot hollow"></i>
+              <b><span lang="en">Just started</span><span lang="zh">刚启动</span></b>
+              <span><span lang="en">Nothing has happened yet.</span><span lang="zh">还什么都没发生。</span></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 03 Features -->
+      <section class="sec" id="features">
+        <div class="mono num">03</div>
+        <div>
+          <h2><span lang="en">What it does</span><span lang="zh">它能做什么</span></h2>
+          <div class="grid">
+            <div class="cell">
+              <div class="shot">
+                <img src="media/screenshot-bar.png" width="286" height="60" alt="The floating light bar: one dot per session showing waiting, running, answered, done, idle and just started" />
+              </div>
+              <b><span lang="en">A light per session</span><span lang="zh">每个会话一盏灯</span></b>
+              <p lang="en">An always-on-top bar with one light per session, in launch order, so each session keeps its place. Pin it to the top-right corner; it follows the screen you're working on.</p>
+              <p lang="zh">一个始终置顶的灯条，每个会话一盏灯，按启动顺序排，位置不会乱跳。可以吸附在屏幕右上角，还会跟着你正在用的屏幕走。</p>
+            </div>
+            <div class="cell">
+              <div class="shot">
+                <img src="media/demo.gif" width="568" height="440" loading="lazy" alt="Clicking a light switches iTerm2 to that session's tmux window" />
+              </div>
+              <b><span lang="en">One click to jump</span><span lang="zh">一键跳转</span></b>
+              <p lang="en">Click a light to switch tmux to that session's window and focus the exact iTerm2, Terminal, or VS Code window. Herdr panes work too.</p>
+              <p lang="zh">点一下灯，tmux 就切到那个会话的窗口，并且把对应的 iTerm2、Terminal 或 VS Code 窗口调到最前面。Herdr 窗格也可以。</p>
+            </div>
+            <div class="cell">
+              <!-- PLACEHOLDER: screenshot of a macOS notification -->
+              <div class="placeholder shot">
+                <span class="mono"><span lang="en">Screenshot · notification</span><span lang="zh">截图 · 通知</span></span>
+              </div>
+              <b><span lang="en">Notifications that know you're looking</span><span lang="zh">懂分寸的通知</span></b>
+              <p lang="en">A banner and a sound when a session needs you or finishes — and silence when you're already looking at that window.</p>
+              <p lang="zh">会话需要你、或者做完的时候，弹通知并响一声。如果你正看着那个窗口，就不打扰你。</p>
+            </div>
+            <div class="cell">
+              <!-- PLACEHOLDER: screenshot of the Restore menu -->
+              <div class="placeholder shot">
+                <span class="mono"><span lang="en">Screenshot · Save / Restore menu</span><span lang="zh">截图 · 保存 / 恢复菜单</span></span>
+              </div>
+              <b><span lang="en">Survive a reboot</span><span lang="zh">重启也不怕</span></b>
+              <p lang="en">Save your tmux sessions — windows, panes, folders, and every Claude conversation — to iCloud Drive, then rebuild them after a reboot with <code>claude --resume</code> in each pane. Auto-save keeps a copy whenever things change.</p>
+              <p lang="zh">把 tmux 会话（窗口、窗格布局、目录，以及里面每一个 Claude 对话）保存到 iCloud Drive。重启后一键重建，每个窗格自动运行 <code>claude --resume</code>。开着自动保存的话，一有变化就存一份。</p>
+            </div>
+          </div>
+          <p class="note mono">
+            <span lang="en">Also: dims lights you've already seen, monochrome menu bar icons, launch at login, and one-click updates from GitHub Releases.</span>
+            <span lang="zh">还有：看过的灯会自动变暗、单色菜单栏图标、开机启动，以及从 GitHub Releases 一键更新。</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- 04 Install -->
+      <section class="sec" id="install">
+        <div class="mono num">04</div>
+        <div>
+          <h2><span lang="en">Install</span><span lang="zh">安装</span></h2>
+          <div class="steps">
+            <div>
+              <b><span lang="en">Build from source</span><span lang="zh">从源码构建</span> <span class="mono tag">recommended</span></b>
+              <p lang="en">No macOS quarantine, and you can read what you run. Needs the Xcode command line tools.</p>
+              <p lang="zh">不会被 macOS 隔离拦住，你也能看清自己运行的是什么。需要先装 Xcode 命令行工具。</p>
+              <pre><code>git clone https://github.com/agate/claude-lights.git
+cd claude-lights
+scripts/bundle.sh
+open build/ClaudeLights.app</code></pre>
+            </div>
+            <div>
+              <b><span lang="en">Download a release</span><span lang="zh">下载发布版</span></b>
+              <p lang="en">
+                Get <code>ClaudeLights.zip</code> from the <a href="https://github.com/agate/claude-lights/releases/latest">latest release</a>.
+                The app isn't notarized, so on first launch open <b>System Settings → Privacy &amp; Security</b> and click
+                <b>Open Anyway</b>. After that it updates itself.
+              </p>
+              <p lang="zh">
+                从<a href="https://github.com/agate/claude-lights/releases/latest">最新发布</a>下载 <code>ClaudeLights.zip</code>。
+                因为没有做 Apple 公证，第一次打开时要去<b>系统设置 → 隐私与安全性</b>，点<b>仍要打开</b>。之后它会自己更新。
+              </p>
+            </div>
+          </div>
+          <p class="note mono">
+            <span lang="en">Requires macOS 13+ and Claude Code 2.1.207 or later. tmux or Herdr is optional — it's only needed to jump to the exact pane.</span>
+            <span lang="zh">需要 macOS 13 以上，以及 Claude Code 2.1.207 或更新版本。tmux 或 Herdr 不是必须的，只有跳到具体窗格时才需要。</span>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="wrap mono">
+      <div class="foot">
+        <span lang="en">Made by <a href="https://honghao.me/">Hong Hao</a> · MIT License</span>
+        <span lang="zh"><a href="https://honghao.me/">Hong Hao</a> 制作 · MIT 许可</span>
+        · <a href="https://github.com/agate/claude-lights">github.com/agate/claude-lights</a>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var buttons = document.querySelectorAll('[data-set-lang]');
+        function apply(lang) {
+          root.dataset.lang = lang;
+          root.lang = lang === 'zh' ? 'zh-CN' : 'en';
+          buttons.forEach(function (b) {
+            b.setAttribute('aria-pressed', String(b.dataset.setLang === lang));
+          });
+        }
+        apply(root.dataset.lang || 'en');
+        buttons.forEach(function (b) {
+          b.addEventListener('click', function () {
+            apply(b.dataset.setLang);
+            try {
+              localStorage.setItem('lang', b.dataset.setLang);
+            } catch (e) {}
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
