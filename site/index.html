@@ -291,9 +291,11 @@ open build/ClaudeLights.app</code></pre>
     </main>
 
     <footer class="wrap mono">
+      <!-- Home link is relative ("/") so it follows the main domain if it ever changes; the label shows the live host. -->
       <div class="foot">
-        <span lang="en">Made by <a href="https://honghao.me/">Hong Hao</a> · MIT License</span>
-        <span lang="zh"><a href="https://honghao.me/">Hong Hao</a> 制作 · MIT 许可</span>
+        <a href="/" class="home-link">← <span data-host>honghao.me</span></a> ·
+        <span lang="en">Made by <a href="/">Hong, Hao</a> · MIT License</span>
+        <span lang="zh"><a href="/">Hong, Hao</a> 制作 · MIT 许可</span>
         · <a href="https://github.com/agate/claude-lights">github.com/agate/claude-lights</a>
       </div>
     </footer>
@@ -310,6 +312,11 @@ open build/ClaudeLights.app</code></pre>
           });
         }
         apply(root.dataset.lang || 'en');
+        if (location.protocol.indexOf('http') === 0) {
+          document.querySelectorAll('[data-host]').forEach(function (el) {
+            el.textContent = location.host;
+          });
+        }
         buttons.forEach(function (b) {
           b.addEventListener('click', function () {
             apply(b.dataset.setLang);

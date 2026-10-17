@@ -95,5 +95,9 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   `#d55e00`, amber `#e69f00`, bluish-green `#009e73`).
 - Screenshot/video slots are `.placeholder` boxes marked `<!-- PLACEHOLDER -->`.
   Put media in `site/media/` and swap the box for `<img>` / `<video>`.
+- Author name is **`Hong, Hao`** (surname first, with the comma) in both
+  languages. The footer must link back to the main domain with a relative
+  `href="/"` — never a hard-coded `https://honghao.me/` — so a domain change
+  in agate.github.io's `site.config.mjs` needs no edit here.
 - The "Why I built it" section is the author's own reasoning — keep its
   substance; don't rewrite it into marketing copy.
