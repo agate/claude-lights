@@ -13,8 +13,8 @@
 
   --en-head: 'Instrument Serif', Georgia, serif;
   --en-body: 'Inter', system-ui, sans-serif;
-  --zh-head: 'Noto Serif SC', 'Songti SC', serif;
-  --zh-body: 'Noto Sans SC', 'PingFang SC', sans-serif;
+  --zh-head: 'LXGW WenKai', 'Kaiti SC', 'STKaiti', serif;
+  --zh-body: 'Inter', 'LXGW WenKai', 'Kaiti SC', 'STKaiti', serif;
   --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
 
   --head: var(--en-head);
@@ -231,28 +231,7 @@ figure {
   margin: 0 auto 10px;
 }
 
-/* Placeholders for screenshots and video, to be replaced later */
-.placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 16px;
-  border: 1px dashed var(--faint);
-  background: repeating-linear-gradient(-45deg, transparent 0 9px, var(--rule) 9px 10px);
-}
-
-.placeholder .mono {
-  background: var(--ground);
-  padding: 2px 8px;
-}
-
-.placeholder.shot {
-  aspect-ratio: 16 / 10;
-  margin-bottom: 14px;
-}
-
-/* Real media: the demo video and screenshot frames */
+/* Real media: the demo video, screenshot frames and the menu capture */
 .demo video {
   display: block;
   width: 100%;
@@ -279,7 +258,27 @@ figure {
 .shot img {
   max-height: 100%;
   width: auto;
+  max-width: 100%;
   object-fit: contain;
+}
+
+.shot video {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+}
+
+.menu-shot {
+  margin: 22px 0 0;
+}
+
+.menu-shot img {
+  display: block;
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  margin-bottom: 8px;
 }
 
 /* Numbered sections */

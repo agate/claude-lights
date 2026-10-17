@@ -10,8 +10,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&family=JetBrains+Mono&family=Noto+Sans+SC:wght@400;500&family=Noto+Serif+SC:wght@400;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&family=JetBrains+Mono&display=swap"
     />
+    <!-- Chinese: LXGW WenKai from jsDelivr. Google Fonts only has the Traditional (TC) build, whose punctuation sits mid-line. -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-regular.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/lxgwwenkai-bold.css" />
     <script>
       // Same mechanism as honghao.me: ?lang= wins, then the saved choice (shared across honghao.me), then the browser.
       (function () {
@@ -80,10 +83,15 @@
           </figcaption>
         </figure>
         <figure class="demo">
-          <video src="media/demo.mp4" poster="media/demo-poster.jpg" width="1136" height="880" autoplay muted loop playsinline controls preload="metadata" aria-label="Demo: hovering lights for details, clicking to jump to tmux windows, and sessions settling from waiting and working to done"></video>
+          <!-- One video per language (captions are burned in); the script below swaps src with the toggle. -->
+          <video id="demo" data-src-en="media/demo-en.mp4" data-src-zh="media/demo-zh.mp4"
+            data-poster-en="media/demo-en-poster.jpg" data-poster-zh="media/demo-zh-poster.jpg"
+            src="media/demo-en.mp4" poster="media/demo-en-poster.jpg" width="1512" height="982"
+            autoplay muted loop playsinline controls preload="metadata"
+            aria-label="Demo: sessions finish and ask for permission while you work in a browser; clicking a light jumps to the session's tmux window or its own Terminal window"></video>
           <figcaption class="mono">
-            <span lang="en">Demo — hover a light for details, click it to jump to that session's tmux window, watch states settle as work finishes.</span>
-            <span lang="zh">演示 — 鼠标悬停看详情，点灯跳到那个会话的 tmux 窗口，看着状态随工作完成而变化。</span>
+            <span lang="en">Demo, 45 s. Turn the sound on to hear the ping that comes with each banner. All sessions are made up for the recording.</span>
+            <span lang="zh">演示，45 秒。打开声音，可以听到每条通知的提示音。视频里的会话都是为录制专门造的演示数据。</span>
           </figcaption>
         </figure>
       </section>
@@ -203,6 +211,13 @@
               <span><span lang="en">Nothing has happened yet.</span><span lang="zh">还什么都没发生。</span></span>
             </div>
           </div>
+          <figure class="menu-shot">
+            <img src="media/menu.png" width="475" height="510" loading="lazy" alt="The menu bar menu: one row per session with its state and age, then Save Sessions, Restore and settings" />
+            <figcaption class="mono">
+              <span lang="en">Click the menu bar dot for the full list: each session's state, what it's waiting for, and how long ago it changed.</span>
+              <span lang="zh">点菜单栏的小点，看完整列表：每个会话的状态、它在等什么、多久前变的。</span>
+            </figcaption>
+          </figure>
         </div>
       </section>
 
@@ -214,7 +229,7 @@
           <div class="grid">
             <div class="cell">
               <div class="shot">
-                <img src="media/screenshot-bar.png" width="286" height="60" alt="The floating light bar: one dot per session showing waiting, running, answered, done, idle and just started" />
+                <img src="media/bar.png" width="143" height="30" alt="The floating light bar with six lights: waiting, done, answered with a background task, idle and seen, running, just started" />
               </div>
               <b><span lang="en">A light per session</span><span lang="zh">每个会话一盏灯</span></b>
               <p lang="en">An always-on-top bar with one light per session, in launch order, so each session keeps its place. Pin it to the top-right corner; it follows the screen you're working on.</p>
@@ -222,25 +237,25 @@
             </div>
             <div class="cell">
               <div class="shot">
-                <img src="media/demo.gif" width="568" height="440" loading="lazy" alt="Clicking a light switches iTerm2 to that session's tmux window" />
+                <video src="media/jump.mp4" width="720" height="480" autoplay muted loop playsinline preload="metadata"
+                  aria-label="Clicking the red light brings Terminal forward on that session's tmux window, showing its permission prompt"></video>
               </div>
               <b><span lang="en">One click to jump</span><span lang="zh">一键跳转</span></b>
               <p lang="en">Click a light to switch tmux to that session's window and focus the exact iTerm2, Terminal, or VS Code window. Herdr panes work too.</p>
               <p lang="zh">点一下灯，tmux 就切到那个会话的窗口，并且把对应的 iTerm2、Terminal 或 VS Code 窗口调到最前面。Herdr 窗格也可以。</p>
             </div>
             <div class="cell">
-              <!-- PLACEHOLDER: screenshot of a macOS notification -->
-              <div class="placeholder shot">
-                <span class="mono"><span lang="en">Screenshot · notification</span><span lang="zh">截图 · 通知</span></span>
+              <div class="shot">
+                <img src="media/notification.png" width="362" height="92" loading="lazy" alt="A macOS banner: blog is done. Fixed 5 typos in the October post. No other changes." />
               </div>
               <b><span lang="en">Notifications that know you're looking</span><span lang="zh">懂分寸的通知</span></b>
               <p lang="en">A banner and a sound when a session needs you or finishes — and silence when you're already looking at that window.</p>
               <p lang="zh">会话需要你、或者做完的时候，弹通知并响一声。如果你正看着那个窗口，就不打扰你。</p>
             </div>
             <div class="cell">
-              <!-- PLACEHOLDER: screenshot of the Restore menu -->
-              <div class="placeholder shot">
-                <span class="mono"><span lang="en">Screenshot · Save / Restore menu</span><span lang="zh">截图 · 保存 / 恢复菜单</span></span>
+              <!-- A drawing, not a screenshot: the real Restore menu lists the author's own saved sessions. -->
+              <div class="shot">
+                <img src="art/restore.svg" width="400" height="250" loading="lazy" alt="" />
               </div>
               <b><span lang="en">Survive a reboot</span><span lang="zh">重启也不怕</span></b>
               <p lang="en">Save your tmux sessions — windows, panes, folders, and every Claude conversation — to iCloud Drive, then rebuild them after a reboot with <code>claude --resume</code> in each pane. Auto-save keeps a copy whenever things change.</p>
@@ -304,9 +319,16 @@ open build/ClaudeLights.app</code></pre>
       (function () {
         var root = document.documentElement;
         var buttons = document.querySelectorAll('[data-set-lang]');
+        var demo = document.getElementById('demo');
         function apply(lang) {
           root.dataset.lang = lang;
           root.lang = lang === 'zh' ? 'zh-CN' : 'en';
+          var src = demo && demo.getAttribute('data-src-' + lang);
+          if (src && demo.getAttribute('src') !== src) {
+            demo.setAttribute('poster', demo.getAttribute('data-poster-' + lang));
+            demo.setAttribute('src', src);
+            demo.play && demo.play().catch(function () {});
+          }
           buttons.forEach(function (b) {
             b.setAttribute('aria-pressed', String(b.dataset.setLang === lang));
           });

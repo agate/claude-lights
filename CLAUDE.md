@@ -86,15 +86,17 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   agate.github.io custom domain). Plain static HTML + `style.css`, no build.
 - It follows the honghao.me style rules — read `CLAUDE.md` in
   agate/agate.github.io (`~/workspaces/honghao.me/CLAUDE.md`) before editing:
-  isometric line art, Instrument Serif / Inter / Noto Serif SC / Noto Sans SC /
-  JetBrains Mono, hairline rules, and every visible string in both
+  isometric line art, Instrument Serif / Inter / LXGW WenKai (Chinese, from
+  jsDelivr) / JetBrains Mono, hairline rules, and every visible string in both
   `lang="en"` and `lang="zh"` (EN / 中 toggle; `localStorage` key `lang` is
   shared with honghao.me).
 - Illustrations: `python3 scripts/gen_site_art.py` writes `site/art/*.svg`;
   never edit those by hand. State colors match the app (Okabe-Ito vermillion
   `#d55e00`, amber `#e69f00`, bluish-green `#009e73`).
-- Screenshot/video slots are `.placeholder` boxes marked `<!-- PLACEHOLDER -->`.
-  Put media in `site/media/` and swap the box for `<img>` / `<video>`.
+- Media in `site/media/` (demo videos per language, bar/menu/notification
+  stills, the jump clip) is produced by `scripts/demo/` with synthetic
+  sessions only — see `scripts/demo/README.md`. Never record or screenshot
+  the author's real sessions, tmux, herdr, Restore menu or Notification Center.
 - Author name is **`Hong, Hao`** (surname first, with the comma) in both
   languages. The footer must link back to the main domain with a relative
   `href="/"` — never a hard-coded `https://honghao.me/` — so a domain change

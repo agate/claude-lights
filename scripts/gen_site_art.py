@@ -194,9 +194,34 @@ def floating():
     return g.svg(360, 260, "Status on the desktop: a small always-on-top light bar and a notification float in front of the browser")
 
 
+def restore():
+    """Save / Restore: a dashed snapshot of three panes, an arrow, and the same panes rebuilt solid."""
+    g = Iso(12, 0, 0)
+    dash = 'stroke-dasharray="3 3"'
+    def panes(ox, solid):
+        g.box(ox, 0, 0, 7.2, 3.6, 0.4, **({} if solid else dict(top="none", left="none", right="none", extra=dash)))
+        for k in range(3):
+            x = ox + 0.4 + k * 2.2
+            if solid:
+                g.box(x, 0.5, 0.4, 1.8, 2.6, 2.2)
+                for r in range(3):
+                    z = 2.2 - r * 0.5
+                    g.line((x + 0.25, 3.1, z), (x + 1.4 - (r % 2) * 0.4, 3.1, z), stroke=GRAY)
+                g.circle((x + 0.35, 3.1, 2.35), 0.14, "xz", fill=[GREEN, AMBER, GREEN][k])
+            else:
+                g.box(x, 0.5, 0.4, 1.8, 2.6, 2.2, top="none", left="none", right="none", extra=dash)
+    panes(0, solid=False)
+    (x1, y1), (x2, y2) = g.p(7.6, 1.8, 1.6), g.p(10.2, 1.8, 1.6)
+    g.out.append(f'<path d="M{x1:.1f},{y1:.1f} L{x2:.1f},{y2:.1f}" stroke="{INK}" stroke-width="1.2"/>')
+    g.out.append(f'<path d="M{x2 - 7:.1f},{y2 - 7:.1f} L{x2:.1f},{y2:.1f} L{x2 - 9:.1f},{y2 + 1:.1f}" '
+                 f'fill="none" stroke="{INK}" stroke-width="1.2"/>')
+    panes(10.6, solid=True)
+    return g.svg(400, 250, "Save and Restore: a dashed snapshot of three tmux panes rebuilt as solid panes")
+
+
 if __name__ == "__main__":
     out = pathlib.Path(__file__).resolve().parent.parent / "site" / "art"
     out.mkdir(parents=True, exist_ok=True)
-    for name, fn in {"hero": hero, "hidden": hidden, "floating": floating}.items():
+    for name, fn in {"hero": hero, "hidden": hidden, "floating": floating, "restore": restore}.items():
         (out / f"{name}.svg").write_text(fn() + "\n")
         print(f"wrote site/art/{name}.svg")
