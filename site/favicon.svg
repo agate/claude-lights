@@ -1,6 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="#171717" stroke-width="1.4">
-  <rect x="10" y="2.5" width="12" height="27" rx="2" fill="#ffffff"/>
-  <circle cx="16" cy="8.5" r="3" fill="#d55e00"/>
-  <circle cx="16" cy="16" r="3" fill="#e69f00"/>
-  <circle cx="16" cy="23.5" r="3" fill="#009e73"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="88 88 848 864" width="64" height="64">
+  <!-- Claude Lights app icon: the three state glyphs, each in its own light.
+       ! vermillion = waiting for you, gear amber = working, check bluish-green = done.
+       Okabe-Ito colors and a distinct glyph per state, so it reads without color too.
+       White plate, soft shadows, circles lit from above. Rebuild the .icns with scripts/make_icon.sh. --><defs>
+  <filter id="cs" x="-40%" y="-40%" width="180%" height="180%">
+  <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity=".22"/>
+  </filter>
+  <filter id="ps" x="-20%" y="-20%" width="140%" height="140%">
+  <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000" flood-opacity=".18"/>
+  </filter>
+  <linearGradient id="gD55E00" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#E8752A"/>
+  <stop offset="1" stop-color="#D55E00"/>
+  </linearGradient>
+  <linearGradient id="gE69F00" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#F4B731"/>
+  <stop offset="1" stop-color="#E69F00"/>
+  </linearGradient>
+  <linearGradient id="g009E73" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#16B386"/>
+  <stop offset="1" stop-color="#009E73"/>
+  </linearGradient>
+  <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#FFFFFF"/>
+  <stop offset="1" stop-color="#F0F0F0"/>
+  </linearGradient>
+  <clipPath id="sq">
+  <rect x="100" y="100" width="824" height="824" rx="184"/>
+  </clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="url(#plate)" stroke="#E2E2E2" stroke-width="4" filter="url(#ps)"/>
+  <circle cx="384" cy="392" r="150" fill="url(#gD55E00)" stroke="#FAFAFA" stroke-width="22" filter="url(#cs)"/>
+  <line x1="384" y1="331.5" x2="384" y2="405.2" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+  <circle cx="384" cy="447.0" r="18.6" fill="#fff"/>
+  <circle cx="640" cy="392" r="150" fill="url(#gE69F00)" stroke="#FAFAFA" stroke-width="22" filter="url(#cs)"/>
+  <line x1="686.2" y1="392.0" x2="708.2" y2="392.0" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+  <line x1="672.7" y1="424.7" x2="688.2" y2="440.2" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+  <line x1="640.0" y1="438.2" x2="640.0" y2="460.2" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+  <line x1="607.3" y1="424.7" x2="591.8" y2="440.2" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+  <line x1="593.8" y1="392.0" x2="571.8" y2="392.0" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+  <line x1="607.3" y1="359.3" x2="591.8" y2="343.8" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+  <line x1="640.0" y1="345.8" x2="640.0" y2="323.8" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+  <line x1="672.7" y1="359.3" x2="688.2" y2="343.8" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
+  <circle cx="640" cy="392" r="37.400000000000006" fill="none" stroke="#fff" stroke-width="30"/>
+  <circle cx="512" cy="628" r="150" fill="url(#g009E73)" stroke="#FAFAFA" stroke-width="22" filter="url(#cs)"/>
+  <path d="M457.0,630.2 L496.6,669.8 L569.2,588.4" fill="none" stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>

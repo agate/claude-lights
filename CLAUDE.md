@@ -16,6 +16,9 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
 - `swift test` — runs the Core suite (keep it green).
 - `scripts/bundle.sh` — builds `build/ClaudeLights.app` (universal, ad-hoc
   signed). Relaunch after building: `open build/ClaudeLights.app`.
+- App icon: edit `assets/icon.svg`, then `scripts/make_icon.sh` regenerates
+  `assets/icon-1024.png` and `assets/AppIcon.icns` (bundle.sh copies the .icns).
+  `site/favicon.svg` is the same drawing cropped to the plate.
 - Release: bump `CFBundleShortVersionString`/`CFBundleVersion` in
   `scripts/bundle.sh`, `ditto -c -k --keepParent build/ClaudeLights.app X.zip`,
   `gh release create vX.Y.Z X.zip`.
