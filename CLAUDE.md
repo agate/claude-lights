@@ -19,6 +19,10 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
 - App icon: edit `assets/icon.svg`, then `scripts/make_icon.sh` regenerates
   `assets/icon-1024.png` and `assets/AppIcon.icns` (bundle.sh copies the .icns).
   `site/favicon.svg` is the same drawing cropped to the plate.
+  Notification banners keep the old icon until every other copy of the bundle id
+  (e.g. an old `/Applications/ClaudeLights.app`) is gone and the per-user caches
+  are cleared: `rm -rf "$(getconf DARWIN_USER_CACHE_DIR)"com.apple.{iconservices,notificationcenterui}`
+  then `killall iconservicesagent usernoted NotificationCenter`.
 - Release: bump `CFBundleShortVersionString`/`CFBundleVersion` in
   `scripts/bundle.sh`, `ditto -c -k --keepParent build/ClaudeLights.app X.zip`,
   `gh release create vX.Y.Z X.zip`.
