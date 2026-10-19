@@ -27,6 +27,11 @@ public struct Session: Identifiable, Equatable, Sendable {
     public let tty: String?
     /// herdr pane id (e.g. "w5:p1") when the session runs inside herdr.
     public let herdrPane: String?
+    /// Every live registry pid of the session: the interactive one first,
+    /// then e.g. the bg record of a backgrounded session. Close ends them all.
+    public let pids: [Int]
+    /// The tmux pane's index within its window (display only).
+    public let tmuxPaneIndex: String?
     /// Commands the session is running (see ProcessTable.claudeCommandCount);
     /// set by the poller after building.
     public var backgroundTasks: Int = 0
@@ -39,7 +44,7 @@ public struct Session: Identifiable, Equatable, Sendable {
                 tmuxSession: String?, tmuxWindow: String?, tmuxPane: String? = nil,
                 waitingFor: String? = nil, title: String? = nil, isOnScreen: Bool = false,
                 version: String? = nil, startedAt: Double? = nil, tty: String? = nil,
-                herdrPane: String? = nil) {
+                herdrPane: String? = nil, pids: [Int]? = nil, tmuxPaneIndex: String? = nil) {
         self.id = id; self.pid = pid; self.cwd = cwd
         self.projectName = projectName; self.derivedName = derivedName
         self.light = light; self.statusText = statusText
@@ -50,6 +55,7 @@ public struct Session: Identifiable, Equatable, Sendable {
         self.title = title; self.isOnScreen = isOnScreen; self.version = version
         self.startedAt = startedAt; self.tty = tty
         self.herdrPane = herdrPane
+        self.pids = pids ?? [pid]; self.tmuxPaneIndex = tmuxPaneIndex
     }
 }
 
@@ -151,7 +157,9 @@ public enum SessionBuilder {
                     version: primary.version ?? anchor.version,
                     startedAt: anchor.startedAt,
                     tty: pidTtys[pid],
-                    herdrPane: herdrAgents.first { $0.sessionId == id }?.paneId)
+                    herdrPane: herdrAgents.first { $0.sessionId == id }?.paneId,
+                    pids: [pid] + group.compactMap(\.pid).filter { $0 != pid }.sorted(),
+                    tmuxPaneIndex: pane?.paneIndex)
             }
             // Stable order by launch time (oldest first), so a session keeps
             // its position for the whole of its life — only its color changes
