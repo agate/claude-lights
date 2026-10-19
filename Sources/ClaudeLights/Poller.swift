@@ -166,9 +166,16 @@ final class Poller {
         seen = SeenTracker.update(seen: seen, greens: greens, visible: visible, all: all)
         refreshTitles(records: records, all: all)
 
-        let sessions = SessionBuilder.build(records: records, pidTtys: pidTtys, panes: panes,
+        var sessions = SessionBuilder.build(records: records, pidTtys: pidTtys, panes: panes,
                                             seenIds: seen, titles: titles, visibleIds: visible,
                                             newIds: newIds, herdrAgents: herdrAgents)
+        if !sessions.isEmpty,
+           let psOut = Shell.run("/bin/ps", ProcessTable.psArguments) {
+            let procs = ProcessTable.parse(psOut)
+            for i in sessions.indices {
+                sessions[i].backgroundTasks = procs.claudeCommandCount(claudePid: sessions[i].pid)
+            }
+        }
         let newlyRed = TransitionDetector.newlyRed(previous: previous, current: sessions)
         let newlyDone = TransitionDetector.newlyDone(previous: previous, current: sessions)
         previous = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0.light) })

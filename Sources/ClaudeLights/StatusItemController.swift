@@ -102,8 +102,9 @@ final class StatusItemController: NSObject {
                                       indented: !sessions.isEmpty))
         }
         for (index, session) in sessions.enumerated() {
-            let mi = NSMenuItem(title: session.summaryLine(),
+            let mi = NSMenuItem(title: session.displayName,
                                 action: #selector(jumpItem(_:)), keyEquivalent: "")
+            mi.attributedTitle = Self.rowTitle(session.menuRow())
             mi.target = self
             mi.tag = index
             // Image column, not the state column: highlighted state-column
@@ -216,6 +217,27 @@ final class StatusItemController: NSObject {
     /// imageless items need this to share a text edge with icon-bearing ones.
     private static let spacerImage = NSImage(size: NSSize(width: 18, height: 18),
                                              flipped: false) { _ in true }
+
+    /// Points from the title's start to the right-aligned age column.
+    private static let ageColumn: CGFloat = 340
+
+    /// Medium-weight title with the age right-aligned on a tab stop, over a smaller
+    /// secondary-colored subtitle. Dynamic colors follow highlight and dark mode.
+    private static func rowTitle(_ row: MenuRow) -> NSAttributedString {
+        let para = NSMutableParagraphStyle()
+        para.tabStops = [NSTextTab(textAlignment: .right, location: ageColumn)]
+        para.lineBreakMode = .byTruncatingTail
+        let base = NSFont.menuFont(ofSize: 0)
+        let small = NSFont.menuFont(ofSize: base.pointSize - 2)
+        let out = NSMutableAttributedString(string: row.title, attributes: [
+            .font: NSFont.systemFont(ofSize: base.pointSize, weight: .medium), .paragraphStyle: para])
+        out.append(NSAttributedString(string: "\t" + row.age, attributes: [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: small.pointSize, weight: .regular),
+            .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: para]))
+        out.append(NSAttributedString(string: "\n" + row.subtitle, attributes: [
+            .font: small, .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: para]))
+        return out
+    }
 
     /// Snapshot rows, each with a ⌥ delete alternate, then the footer.
     private func addSnapshotEntries(_ entries: [SnapshotMenuEntry], to sub: NSMenu,

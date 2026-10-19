@@ -53,4 +53,13 @@ public struct ProcessTable: Sendable {
         }
         return false
     }
+
+    /// Commands a Claude session is running: each Bash tool call is a direct
+    /// child `zsh -c source …/shell-snapshots/snapshot-…`. Includes the
+    /// foreground command, if any; MCP servers and helpers are not counted.
+    public func claudeCommandCount(claudePid: Int) -> Int {
+        procs[claudePid]?.children.filter {
+            procs[$0]?.args.contains("/shell-snapshots/snapshot-") == true
+        }.count ?? 0
+    }
 }

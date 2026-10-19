@@ -27,6 +27,9 @@ public struct Session: Identifiable, Equatable, Sendable {
     public let tty: String?
     /// herdr pane id (e.g. "w5:p1") when the session runs inside herdr.
     public let herdrPane: String?
+    /// Commands the session is running (see ProcessTable.claudeCommandCount);
+    /// set by the poller after building.
+    public var backgroundTasks: Int = 0
 
     /// Primary display label: the AI title when available, else the project dir name.
     public var displayName: String { title ?? projectName }
@@ -65,6 +68,33 @@ public extension Session {
         }
         if tmuxSession == nil, herdrPane == nil { line += " · not in tmux" }
         return line
+    }
+}
+
+/// A session's two-line tray menu row; `age` is right-aligned.
+public struct MenuRow: Equatable, Sendable {
+    public let title: String
+    public let subtitle: String
+    public let age: String
+
+    public init(title: String, subtitle: String, age: String) {
+        self.title = title; self.subtitle = subtitle; self.age = age
+    }
+}
+
+public extension Session {
+    func menuRow(now: Date = Date()) -> MenuRow {
+        var parts = [statusText]
+        if let waitingFor {
+            parts.append(waitingFor)
+        } else if title != nil {
+            parts.append(projectName) // untitled rows already show it as the title
+        }
+        if tmuxSession == nil, herdrPane == nil { parts.append("not in tmux") }
+        // While working, the count includes the foreground command.
+        if backgroundTasks > 0, light != .yellow { parts.append("⚙\(backgroundTasks)") }
+        return MenuRow(title: displayName, subtitle: parts.joined(separator: " · "),
+                       age: AgeFormatter.short(from: statusUpdatedAt, now: now))
     }
 }
 
@@ -152,6 +182,14 @@ public enum AgeFormatter {
         if seconds < 3600 { return "\(seconds / 60)m ago" }
         if seconds < 86400 { return "\(seconds / 3600)h ago" }
         return "\(seconds / 86400)d ago"
+    }
+
+    /// Compact age for a right-aligned column: "7s", "30m", "3h", "2d".
+    public static func short(from date: Date?, now: Date = Date()) -> String {
+        guard let date else { return "" }
+        let seconds = max(0, Int(now.timeIntervalSince(date)))
+        if seconds < 60 { return "\(seconds)s" }
+        return duration(from: date, now: now)
     }
 
     /// Bare duration ("12m", "2h") for "Idle for X" phrasing.

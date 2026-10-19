@@ -49,4 +49,17 @@ final class ProcessTableTests: XCTestCase {
         let t = ProcessTable.parse("garbage\n  7 1 7 7 vim\n")
         XCTAssertNil(t.foregroundCommand(shellPid: 7))
     }
+
+    func testClaudeCommandCountCountsShellSnapshotChildrenOnly() {
+        let t = ProcessTable.parse("""
+          800     1   800   800 claude
+          810   800   810   810 /bin/zsh -c source /Users/dev/.claude/shell-snapshots/snapshot-zsh-1-a.sh 2>/dev/null || true && eval 'npm test'
+          811   800   811   811 /bin/zsh -c source /Users/dev/.claude/shell-snapshots/snapshot-zsh-1-a.sh 2>/dev/null || true && eval 'sleep 99'
+          812   800   812   812 caffeinate -i -t 300
+          813   800   813   813 node /Users/dev/mcp/server.js
+          820   810   810   810 npm test
+        """)
+        XCTAssertEqual(t.claudeCommandCount(claudePid: 800), 2)
+        XCTAssertEqual(t.claudeCommandCount(claudePid: 999), 0)
+    }
 }
