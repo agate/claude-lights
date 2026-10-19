@@ -53,7 +53,12 @@ final class SessionDetailsMenu: NSObject, NSMenuDelegate {
             // One text wrapped over several rows, aligned under the values.
             TranscriptReader.wrap(summary.text).forEach { row("", $0) }
         }
-        row("Status", [session.statusText, session.waitingFor].compactMap { $0 }.joined(separator: " · "))
+        var status = [session.statusText, session.waitingFor].compactMap { $0 }
+        // Commands Claude started (Bash tool children); while it is working
+        // the count includes the foreground one.
+        let n = session.backgroundTasks
+        if n > 0 { status.append("⚙ \(n) command\(n == 1 ? "" : "s") running") }
+        row("Status", status.joined(separator: " · "))
         row("Runs in", session.locationLine)
         if let version = session.version { row("Version", "Claude Code \(version)") }
 
