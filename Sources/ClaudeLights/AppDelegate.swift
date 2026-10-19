@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = SessionStore()
     let poller = Poller()
     private let jumper = Jumper()
+    private let closer = SessionCloser()
     private let snapshotQueue = DispatchQueue(label: "ClaudeLights.snapshots")
     /// Main-thread only; recomputed off-main by refreshSnapshotEntries().
     private var cachedSnapshotEntries: [SnapshotMenuEntry] = [
@@ -37,6 +38,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         statusController.onJump = { [weak self] session in
             self?.jump(to: session)
+        }
+        statusController.onCloseSession = { [weak self] session in
+            self?.confirmClose(session)
         }
         statusController.onToggleBar = { [weak self] in
             guard let self else { return }
@@ -192,6 +196,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 self.notifier.notifyInfo(title: "Delete Saved Session", body: body)
                 self.refreshSnapshotEntries()
+            }
+        }
+    }
+
+    /// Both entry points (tray ⌥ row, bar right-click) land here.
+    private func confirmClose(_ session: Session) {
+        // LSUIElement app: activate or the alert opens behind the frontmost app.
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Close “\(session.displayName)”?"
+        var body = [CloseTarget.for(session).description(for: session)]
+        if session.light == .yellow { body.append("It is working right now.") }
+        if session.backgroundTasks > 0 {
+            let n = session.backgroundTasks
+            body.append("The \(n) command\(n == 1 ? "" : "s") it started will be stopped too.")
+        }
+        alert.informativeText = body.joined(separator: "\n\n")
+        alert.addButton(withTitle: "Close")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let error = self.closer.close(session) else { return }
+            DispatchQueue.main.async {
+                self.notifier.notifyInfo(title: "Close Session", body: error)
             }
         }
     }

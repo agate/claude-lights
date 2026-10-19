@@ -4,6 +4,8 @@ import ClaudeLightsCore
 
 final class StatusItemController: NSObject {
     var onJump: ((Session) -> Void)?
+    /// Session to close (the ⌥ alternate of a session row); confirms first.
+    var onCloseSession: ((Session) -> Void)?
     var onToggleBar: (() -> Void)?
     var isBarShown: () -> Bool = { true }
     var onCheckForUpdates: (() -> Void)?
@@ -112,6 +114,20 @@ final class StatusItemController: NSObject {
             mi.image = StatusIcon.image(for: session.light, monochrome: IconStyle.monochrome)
             mi.toolTip = "\(session.cwd)\n\(session.derivedName)"
             menu.addItem(mi)
+
+            // ⌥ turns the row into Close, keeping its two-line height so the
+            // menu does not jump while the key is held.
+            let close = NSMenuItem(title: "Close “\(session.displayName)”…",
+                                   action: #selector(closeItem(_:)), keyEquivalent: "")
+            close.attributedTitle = Self.rowTitle(MenuRow(
+                title: close.title,
+                subtitle: CloseTarget.for(session).description(for: session), age: ""))
+            close.target = self
+            close.tag = index
+            close.image = mi.image
+            close.isAlternate = true
+            close.keyEquivalentModifierMask = .option
+            menu.addItem(close)
         }
         menu.addItem(.separator())
 
@@ -276,6 +292,11 @@ final class StatusItemController: NSObject {
     @objc private func jumpItem(_ sender: NSMenuItem) {
         guard sessions.indices.contains(sender.tag) else { return }
         onJump?(sessions[sender.tag])
+    }
+
+    @objc private func closeItem(_ sender: NSMenuItem) {
+        guard sessions.indices.contains(sender.tag) else { return }
+        onCloseSession?(sessions[sender.tag])
     }
 
     @objc private func toggleBar() { onToggleBar?() }
