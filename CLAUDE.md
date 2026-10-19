@@ -109,7 +109,8 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   `lang="en"` and `lang="zh"` (EN / 中 toggle; `localStorage` key `lang` is
   shared with honghao.me).
 - Illustrations: `python3 scripts/gen_site_art.py` writes `site/art/*.svg`;
-  never edit those by hand. State colors match the app (Okabe-Ito vermillion
+  never edit those by hand. Every "What it does" cell uses one of these
+  drawings, never a screenshot. State colors match the app (Okabe-Ito vermillion
   `#d55e00`, amber `#e69f00`, bluish-green `#009e73`).
 - Media in `site/media/` (demo videos per language, bar/menu/notification
   stills, the jump clip) is produced by `scripts/demo/` with synthetic

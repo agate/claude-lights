@@ -226,10 +226,11 @@
         <div class="mono num">03</div>
         <div>
           <h2><span lang="en">What it does</span><span lang="zh">它能做什么</span></h2>
+          <!-- Every cell is a generated drawing (scripts/gen_site_art.py), never a screenshot. -->
           <div class="grid">
             <div class="cell">
               <div class="shot">
-                <img src="media/bar.png" width="143" height="30" alt="The floating light bar with six lights: waiting, done, answered with a background task, idle and seen, running, just started" />
+                <img src="art/lights.svg" width="400" height="250" alt="" />
               </div>
               <b><span lang="en">A light per session</span><span lang="zh">每个会话一盏灯</span></b>
               <p lang="en">An always-on-top bar with one light per session, in launch order, so each session keeps its place. Pin it to the top-right corner; it follows the screen you're working on.</p>
@@ -237,8 +238,7 @@
             </div>
             <div class="cell">
               <div class="shot">
-                <video src="media/jump.mp4" width="720" height="480" autoplay muted loop playsinline preload="metadata"
-                  aria-label="Clicking the red light brings Terminal forward on that session's tmux window, showing its permission prompt"></video>
+                <img src="art/jump.svg" width="400" height="250" loading="lazy" alt="" />
               </div>
               <b><span lang="en">One click to jump</span><span lang="zh">一键跳转</span></b>
               <p lang="en">Click a light to switch tmux to that session's window and focus the exact iTerm2, Terminal, or VS Code window. Herdr panes work too.</p>
@@ -246,14 +246,13 @@
             </div>
             <div class="cell">
               <div class="shot">
-                <img src="media/notification.png" width="362" height="92" loading="lazy" alt="A macOS banner: blog is done. Fixed 5 typos in the October post. No other changes." />
+                <img src="art/notify.svg" width="400" height="250" loading="lazy" alt="" />
               </div>
               <b><span lang="en">Notifications that know you're looking</span><span lang="zh">懂分寸的通知</span></b>
               <p lang="en">A banner and a sound when a session needs you or finishes — and silence when you're already looking at that window.</p>
               <p lang="zh">会话需要你、或者做完的时候，弹通知并响一声。如果你正看着那个窗口，就不打扰你。</p>
             </div>
             <div class="cell">
-              <!-- A drawing, not a screenshot: the real Restore menu lists the author's own saved sessions. -->
               <div class="shot">
                 <img src="art/restore.svg" width="400" height="250" loading="lazy" alt="" />
               </div>

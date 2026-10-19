@@ -270,10 +270,73 @@ def close():
     return g.svg(400, 250, "Close: Claude's tmux pane is removed while the shell pane beside it stays open")
 
 
+def bar_lights(g, x, y, z, states, pitch=2.3, r=0.66):
+    """The floating light bar lying flat: one socketed lamp per session."""
+    g.box(x, y, z, len(states) * pitch + 0.3, 2.4, 0.7)
+    for i, (fill, kind) in enumerate(states):
+        c = (x + 0.15 + pitch * (i + 0.5), y + 1.2, z + 0.7)
+        g.circle(c, r + 0.22, "xy", fill=LEFT)  # socket
+        lamp(g, c, r, fill, kind, stroke=GRAY if fill == GROUND else INK)
+
+
+ALL_STATES = [(VERMILLION, "!"), (GREEN, "check"), (GREEN, "gear"), (GRAY, None), (AMBER, "gear"), (GROUND, None)]
+
+
+def lights():
+    """A light per session: the bar with every state, in launch order."""
+    g = Iso(22, 0, 0)
+    bar_lights(g, 0, 0, 0, ALL_STATES)
+    return g.svg(400, 250, "The floating light bar: waiting, done, answered with a background task, idle, running, just started")
+
+
+def jump():
+    """One click to jump: a dashed lead from the red light to that session's terminal window."""
+    g = Iso(13, 0, 0)
+    f = window(g, 0, 0, 0, 7.4, 5.2, "terminal")
+    # tmux status line along the bottom, the session's window marked
+    g.line(f(0.3, 0.5), f(7.1, 0.5), stroke=GRAY)
+    g.poly([f(1.4, 0.32), f(2.4, 0.32), f(2.4, 0.68), f(1.4, 0.68)], fill=VERMILLION)
+    # the permission prompt the session is waiting on
+    g.circle(f(0.6, 1.3), 0.2, "xz", fill=VERMILLION)
+    g.line(f(1.0, 1.3), f(4.6, 1.3))
+    # the light bar off to the right, above the window; its red light was clicked
+    bx, by, bz = 8.6, -1.0, 6.4
+    g.box(bx, by, bz, 3.6, 0.3, 0.9)
+    for k, fill in enumerate((VERMILLION, GREEN, AMBER, GRAY)):
+        g.circle((bx + 0.5 + k * 0.85, by + 0.3, bz + 0.45), 0.3, "xz", fill=fill)
+    g.line((bx + 0.5, by + 0.3, bz + 0.1), f(2.4, 0.68), stroke=VERMILLION, extra='stroke-dasharray="2 3"')
+    return g.svg(400, 250, "One click to jump: clicking the red light brings that session's terminal window forward on its tmux window")
+
+
+def notify():
+    """A notification banner: the app's three lights, a title and a line of detail."""
+    g = Iso(13, 0, 0)
+    nx, ny, nz, nw, nh = 0, 0, 0, 9.0, 2.4
+    g.box(nx, ny, nz, nw, 0.3, nh)
+    fy = ny + 0.3
+    def f(u, v):
+        return (nx + u, fy, nz + v)
+    # app icon: the three state lights on a white plate
+    g.poly([f(0.4, 0.4), f(2.0, 0.4), f(2.0, 2.0), f(0.4, 2.0)], fill=TOP)
+    for (u, v), fill in (((0.85, 1.45), VERMILLION), ((1.55, 1.45), AMBER), ((1.2, 0.85), GREEN)):
+        g.circle(f(u, v), 0.3, "xz", fill=fill)
+    g.line(f(2.5, 1.7), f(5.6, 1.7), sw=1.4)  # "blog is done"
+    g.line(f(2.5, 1.15), f(8.2, 1.15), stroke=GRAY)
+    g.line(f(2.5, 0.7), f(6.4, 0.7), stroke=GRAY)
+    # sound waves from the banner's corner
+    for k in range(3):
+        r = 0.4 + k * 0.35
+        pts = [(nw + 0.3 + r * math.cos(t), fy, nh - 0.2 + r * math.sin(t)) for t in (math.pi * (-0.25 + i / 20 * 0.5) for i in range(11))]
+        d = " ".join(f"{a:.1f},{b:.1f}" for a, b in (g.p(*q) for q in pts))
+        g.out.append(f'<polyline points="{d}" fill="none" stroke="{GRAY}" stroke-width="1"/>')
+    return g.svg(400, 250, "A notification banner with the Claude Lights icon and a ping")
+
+
 if __name__ == "__main__":
     out = pathlib.Path(__file__).resolve().parent.parent / "site" / "art"
     out.mkdir(parents=True, exist_ok=True)
     for name, fn in {"hero": hero, "hidden": hidden, "floating": floating, "restore": restore,
-                     "details": details, "close": close}.items():
+                     "details": details, "close": close, "lights": lights, "jump": jump,
+                     "notify": notify}.items():
         (out / f"{name}.svg").write_text(fn() + "\n")
         print(f"wrote site/art/{name}.svg")
