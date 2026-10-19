@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-64.8 -34.6 146.2 91.4" width="400" height="250" role="img" aria-label="Close: Claude's tmux pane is removed while the shell pane beside it stays open" stroke-linejoin="round" stroke-linecap="round">
+    <polygon points="-37.4,21.6 16.6,52.8 16.6,48.0 -37.4,16.8" fill="#f1f1f1" stroke="#171717" stroke-width="1" />
+    <polygon points="54.0,31.2 16.6,52.8 16.6,48.0 54.0,26.4" fill="#e6e6e6" stroke="#171717" stroke-width="1" />
+    <polygon points="0.0,-4.8 54.0,26.4 16.6,48.0 -37.4,16.8" fill="#ffffff" stroke="#171717" stroke-width="1" />
+    <polygon points="-28.1,16.2 -7.3,28.2 -7.3,-3.0 -28.1,-15.0" fill="none" stroke="#171717" stroke-width="1" stroke-dasharray="3 3"/>
+    <polygon points="19.7,12.6 -7.3,28.2 -7.3,-3.0 19.7,-18.6" fill="none" stroke="#171717" stroke-width="1" stroke-dasharray="3 3"/>
+    <polygon points="-1.0,-30.6 19.7,-18.6 -7.3,-3.0 -28.1,-15.0" fill="none" stroke="#171717" stroke-width="1" stroke-dasharray="3 3"/>
+    <polygon points="-3.1,30.6 17.7,42.6 17.7,11.4 -3.1,-0.6" fill="#f1f1f1" stroke="#171717" stroke-width="1" />
+    <polygon points="44.7,27.0 17.7,42.6 17.7,11.4 44.7,-4.2" fill="#e6e6e6" stroke="#171717" stroke-width="1" />
+    <polygon points="23.9,-16.2 44.7,-4.2 17.7,11.4 -3.1,-0.6" fill="#ffffff" stroke="#171717" stroke-width="1" />
+    <line x1="-0.5" y1="5.7" x2="11.4" y2="12.6" stroke="#8f8f8f" stroke-width="1" />
+    <line x1="-0.5" y1="11.7" x2="6.2" y2="15.6" stroke="#8f8f8f" stroke-width="1" />
+    <line x1="-0.5" y1="17.7" x2="11.4" y2="24.6" stroke="#8f8f8f" stroke-width="1" />
+    <line x1="-0.5" y1="23.7" x2="6.2" y2="27.6" stroke="#8f8f8f" stroke-width="1" />
+    <path d="M-23.7,0.6 L-11.7,12.6 M-11.7,0.6 L-23.7,12.6" stroke="#d55e00" stroke-width="1.6"/>
+  </svg>

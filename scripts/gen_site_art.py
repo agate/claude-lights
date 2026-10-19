@@ -219,9 +219,61 @@ def restore():
     return g.svg(400, 250, "Save and Restore: a dashed snapshot of three tmux panes rebuilt as solid panes")
 
 
+def details():
+    """Right-click a light: a menu card hangs from the bar with labeled rows, a summary and Close."""
+    g = Iso(13, 0, 0)
+    # the floating bar, upright like a window, with the right-clicked light in vermillion
+    bx, by, bz = 0, 0, 5.6
+    g.box(bx, by, bz, 4.2, 0.3, 0.9)
+    for k, fill in enumerate((GREEN, VERMILLION, AMBER, GRAY)):
+        g.circle((bx + 0.6 + k * 1.0, by + 0.3, bz + 0.45), 0.28, "xz", fill=fill)
+    # the menu card, in front of the bar and below the clicked light
+    mx, my, mz, mw, mh = 1.2, 1.4, 0, 9.0, 5.0
+    g.box(mx, my, mz, mw, 0.2, mh)
+    fy = my + 0.2
+    def f(u, v):
+        return (mx + u, fy, mz + v)
+    g.line(f(0.4, mh - 0.5), f(4.2, mh - 0.5))  # title
+    g.line(f(0, mh - 0.9), f(mw, mh - 0.9), stroke=GRAY)
+    def row(v, value_end):
+        g.line(f(0.4, v), f(1.6, v), stroke=GRAY)  # label column
+        g.line(f(2.2, v), f(value_end, v))
+    row(mh - 1.35, 7.0)                # Directory
+    row(mh - 1.8, 5.6)                 # Summary source
+    for r, end in enumerate((8.4, 8.0, 5.2)):
+        g.line(f(2.2, mh - 2.2 - r * 0.38), f(end, mh - 2.2 - r * 0.38), stroke=GRAY)  # wrapped summary
+    row(mh - 3.45, 6.4)                # Status
+    row(mh - 3.9, 5.8)                 # Runs in
+    g.line(f(0, mh - 4.3), f(mw, mh - 4.3), stroke=GRAY)
+    g.line(f(0.4, 0.35), f(3.0, 0.35), stroke=VERMILLION, sw=1.4)  # Close
+    # a dashed lead from the clicked light down to the card
+    g.line((bx + 1.6, by + 0.3, bz), (mx + 0.6, fy, mh), stroke=VERMILLION, extra='stroke-dasharray="2 3"')
+    return g.svg(400, 250, "Right-click a light: a menu with the session's directory, summary, status, location and a Close item")
+
+
+def close():
+    """Close: a tmux window of two panes; Claude's pane is gone (dashed), the shell beside it stays."""
+    g = Iso(12, 0, 0)
+    dash = 'stroke-dasharray="3 3"'
+    g.box(0, 0, 0, 5.2, 3.6, 0.4)
+    # Claude's pane, closed: only a dashed outline is left
+    g.box(0.4, 0.5, 0.4, 2.0, 2.6, 2.6, top="none", left="none", right="none", extra=dash)
+    # the shell pane next to it keeps running
+    g.box(2.8, 0.5, 0.4, 2.0, 2.6, 2.6)
+    for r in range(4):
+        z = 2.6 - r * 0.5
+        g.line((3.05, 3.1, z), (4.2 - (r % 2) * 0.5, 3.1, z), stroke=GRAY)
+    # a cross over where Claude was
+    (x, y) = g.p(1.4, 3.1, 1.7)
+    g.out.append(f'<path d="M{x-6:.1f},{y-6:.1f} L{x+6:.1f},{y+6:.1f} M{x+6:.1f},{y-6:.1f} L{x-6:.1f},{y+6:.1f}" '
+                 f'stroke="{VERMILLION}" stroke-width="1.6"/>')
+    return g.svg(400, 250, "Close: Claude's tmux pane is removed while the shell pane beside it stays open")
+
+
 if __name__ == "__main__":
     out = pathlib.Path(__file__).resolve().parent.parent / "site" / "art"
     out.mkdir(parents=True, exist_ok=True)
-    for name, fn in {"hero": hero, "hidden": hidden, "floating": floating, "restore": restore}.items():
+    for name, fn in {"hero": hero, "hidden": hidden, "floating": floating, "restore": restore,
+                     "details": details, "close": close}.items():
         (out / f"{name}.svg").write_text(fn() + "\n")
         print(f"wrote site/art/{name}.svg")

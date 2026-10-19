@@ -1,5 +1,7 @@
 # Claude Lights
 
+**Website:** https://honghao.me/claude-lights/ (English / 中文, with a demo video)
+
 A macOS menu bar app that shows every local Claude Code session as a status
 dot. Each state is encoded twice — a colorblind-safe color **and** a glyph —
 so it reads clearly regardless of color vision:
@@ -16,18 +18,15 @@ so it reads clearly regardless of color vision:
 Includes an always-on-top floating light bar, one-click jump to the
 session's tmux window or [herdr](https://github.com/herdrdev/herdr) pane
 (iTerm2, Apple Terminal, or VS Code), a notification with sound when a
-session needs you or finishes, and Save / Restore of your sessions across
-reboots.
+session needs you or finishes, a details menu with one-click **Close** for
+any session, and Save / Restore of your sessions across reboots.
 
-![Floating light bar — one dot per session: waiting (!), running (spinning gear), answered with a background task (static gear), done (✓), idle seen, just started](assets/screenshot-bar.png)
+![Floating light bar — one dot per session: waiting (!), done (✓), answered with a background task (static gear), idle seen, running (spinning gear), just started](site/media/bar.png)
 
-The full loop in ~40 s (2× speed) — hover a dot for details, click it to
-jump straight to that session's tmux window, watch states settle as work
-finishes, and check the menu for the session list:
+[![Demo video: sessions finish and ask for permission while you work in a browser; clicking a light jumps to that session's terminal](site/media/demo-en-poster.jpg)](https://honghao.me/claude-lights/)
 
-![Demo: hovering dots for tooltips, click-to-jump switching tmux windows in iTerm2, sessions turning from waiting/working/background to done, and the session menu](assets/demo.gif)
-
-([Full-quality video](assets/demo.mov))
+(Click for the 45 s demo on the website. All sessions in it are made up for
+the recording.)
 
 ## Requirements
 
@@ -84,19 +83,23 @@ needed once.
 
 ### First launch
 
-Grant the notification permission when asked; the first click-to-jump also
-asks once for permission to control your terminal (iTerm2, Apple Terminal,
-or VS Code). Save / Restore need access to iCloud Drive; macOS may ask the
+Grant the notification permission when asked; the first click-to-jump (or
+Close of a terminal tab) also asks once for permission to control your
+terminal (iTerm2, Apple Terminal, or VS Code). Save / Restore need access to iCloud Drive; macOS may ask the
 first time.
 
 ## Usage
 
 - **Menu bar dot** shows the aggregate state — red if any session needs you,
   else the spinning gear if any is running, else green/gray. Click it for a
-  per-session list (project, state, idle duration); click a row to jump.
+  per-session list: each row shows the session's title and how long ago it
+  changed, over its state, what it's waiting for (or its project) and ⚙N
+  for the commands it's running. Click a row to jump; hold **⌥ Option** and
+  a row opens that session's details submenu (see below).
 - **Floating bar**: one dot per session in a fixed order (by launch time), so
   each session keeps its place — only its color changes as it works, waits,
-  or finishes. Hover for details, click to jump, drag to reposition.
+  or finishes. Hover for a one-line summary, click to jump, right-click for
+  the details menu, drag to reposition.
   - Drag it near the **top-right corner** to magnetically pin it there; it
     then stays flush with that corner as sessions come and go. Drag it away
     to unpin.
@@ -107,6 +110,19 @@ first time.
   session inside **herdr**, it focuses the session's herdr pane and the tab
   running herdr. If every terminal window is closed, it offers to open a new
   one attached to the session (tmux or herdr).
+- **Details menu** (right-click a light, or ⌥ on a tray row): the session's
+  **Directory** (click to copy), a **Summary** — Claude's latest recap (the
+  "while you were away" note) with its age, or your last prompt when there
+  is no recap yet — **Status** with the number of commands it's running,
+  where it **Runs in** (tmux `session:window.pane`, herdr pane, or terminal
+  tab) and its Claude Code **Version**.
+- **Close** (last item of the details menu) asks for confirmation, then stops
+  Claude and the commands it started (SIGTERM, SIGKILL after 3 s) and closes
+  only Claude's own place: its tmux pane (other panes in the window stay),
+  its herdr pane, or its terminal tab. iTerm2 closes the single tab; Apple
+  Terminal can only close whole windows, so it closes the window only when
+  that tab was its only one. In VS Code, Claude is stopped and the terminal
+  stays. The conversation is not lost: `claude --resume` brings it back.
 - **Save Sessions** (menu) records every running tmux session — windows,
   pane layouts, working directories — and every Claude session in it, plus
   Claude sessions running outside tmux. Snapshots live in iCloud Drive under
