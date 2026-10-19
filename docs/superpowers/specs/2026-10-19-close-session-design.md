@@ -1,7 +1,7 @@
 # Close Session Design
 
 Date: 2026-10-19
-Status: draft (awaiting user review)
+Status: approved
 
 ## Goal
 
