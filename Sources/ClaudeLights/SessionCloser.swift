@@ -47,8 +47,7 @@ final class SessionCloser {
     private func groupAlive(_ pgid: Int32) -> Bool { kill(-pgid, 0) == 0 || errno == EPERM }
 
     private func isRegistered(pid: Int, sessionId: String) -> Bool {
-        let url = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent(".claude/sessions/\(pid).json")
+        let url = SessionRegistry.defaultDir.appendingPathComponent("\(pid).json")
         guard let data = try? Data(contentsOf: url),
               let record = try? JSONDecoder().decode(AgentRecord.self, from: data) else { return false }
         return (record.sessionId ?? String(pid)) == sessionId
@@ -87,13 +86,15 @@ final class SessionCloser {
         """)
     }
 
+    /// Terminal's AppleScript cannot close a single tab, only a window: close
+    /// the window when the tab is its only one, else leave the tab open.
     private func closeAppleTerminalTab(tty: String) -> Bool {
         runScript(bundleId: "com.apple.Terminal", script: """
         tell application "Terminal"
             repeat with w in windows
                 repeat with t in tabs of w
                     if tty of t is "\(tty)" then
-                        close t
+                        if (count of tabs of w) is 1 then close w
                         return "ok"
                     end if
                 end repeat

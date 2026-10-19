@@ -32,6 +32,8 @@ cleaning up.
   - herdr → `herdr pane close <pane_id>` (claude's own herdr pane).
   - iTerm2 / Apple Terminal tab → close the tab/session whose tty equals
     the session's own `tty` (the same tty matching `Jumper` uses to focus).
+    Apple Terminal's AppleScript cannot close a single tab (only windows),
+    so there the window is closed only when that tab is its sole tab.
   - VS Code, or no tab matches → process only.
 - **Both entry points confirm** with an `NSAlert` before doing anything.
 - **Bar context menu content**, top to bottom:

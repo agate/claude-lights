@@ -123,7 +123,9 @@ final class StatusItemController: NSObject {
                 title: close.title,
                 subtitle: CloseTarget.for(session).description(for: session), age: ""))
             close.target = self
-            close.tag = index
+            // By id, not index: a poll may replace `sessions` while the menu
+            // is open, and a shifted index would close the wrong session.
+            close.representedObject = session.id
             close.image = mi.image
             close.isAlternate = true
             close.keyEquivalentModifierMask = .option
@@ -295,8 +297,9 @@ final class StatusItemController: NSObject {
     }
 
     @objc private func closeItem(_ sender: NSMenuItem) {
-        guard sessions.indices.contains(sender.tag) else { return }
-        onCloseSession?(sessions[sender.tag])
+        guard let id = sender.representedObject as? String,
+              let session = sessions.first(where: { $0.id == id }) else { return }
+        onCloseSession?(session)
     }
 
     @objc private func toggleBar() { onToggleBar?() }

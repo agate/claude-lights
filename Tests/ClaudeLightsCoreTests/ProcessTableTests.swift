@@ -68,8 +68,10 @@ final class ProcessTableTests: XCTestCase {
           800     1   800   800 claude
           810   800   810   810 /bin/zsh -c source /Users/dev/.claude/shell-snapshots/snapshot-zsh-1-a.sh && eval 'npm run dev'
           811   800   811   811 /bin/zsh -c source /Users/dev/.claude/shell-snapshots/snapshot-zsh-1-a.sh && eval 'sleep 99'
+          812   800   800   800 /bin/zsh -c source /Users/dev/.claude/shell-snapshots/snapshot-zsh-1-a.sh && eval 'ls'
           813   800   800   800 node /Users/dev/mcp/server.js
         """)
+        // 812 shares Claude's own group: never signalled as a group.
         XCTAssertEqual(t.claudeCommandGroups(claudePid: 800), [810, 811])
         XCTAssertEqual(t.claudeCommandGroups(claudePid: 999), [])
     }

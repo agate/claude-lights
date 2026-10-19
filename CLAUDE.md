@@ -77,7 +77,9 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   group, so neither SIGTERM to claude nor `kill-pane` reaches them;
   collect them *before* claude exits (they re-parent to launchd). Then
   only Claude's own pane: `kill-pane -t %id` / `herdr pane close` / the
-  terminal tab with claude's tty; VS Code = process only. Bar menu summary
+  terminal tab with claude's tty (Terminal.app's AppleScript
+  can only close windows: closed only when it is the window's sole tab);
+  VS Code = process only. Bar menu summary
   = newest `away_summary` recap, else `last-prompt` (2 MB tail).
 - **Auto-save** (on by default, toggle in Restore ▸ Auto Saved): every 15 s
   builds the same snapshots into `.../<ComputerName>/auto-saved/`, written

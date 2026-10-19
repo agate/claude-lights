@@ -64,8 +64,12 @@ public struct ProcessTable: Sendable {
     /// Process groups of those commands. Each Bash tool call leads its own
     /// group, so stopping Claude or its pane does not reach them; Close
     /// signals these groups directly.
+    /// Only commands that lead their own group count: signalling a group
+    /// shared with Claude or its shell would reach unrelated processes.
     public func claudeCommandGroups(claudePid: Int) -> [Int] {
-        Array(Set(claudeCommandPids(claudePid: claudePid).compactMap { procs[$0]?.pgid })).sorted()
+        claudeCommandPids(claudePid: claudePid)
+            .filter { $0 > 1 && procs[$0]?.pgid == $0 }
+            .sorted()
     }
 
     private func claudeCommandPids(claudePid: Int) -> [Int] {

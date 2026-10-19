@@ -140,6 +140,7 @@ final class FloatingBar: NSObject, NSWindowDelegate {
     var onCloseSession: ((Session) -> Void)?
     /// The dot under the cursor, by session id (from the hover reporters).
     private var hoveredId: String?
+    private var hoveredRect: NSRect = .zero
     /// Session the open context menu is about.
     private var menuSession: Session?
 
@@ -257,6 +258,7 @@ final class FloatingBar: NSObject, NSWindowDelegate {
     private func handleHover(_ session: Session, hovering: Bool, anchor: NSRect) {
         if hovering {
             hoveredId = session.id
+            hoveredRect = anchor
         } else if hoveredId == session.id {
             hoveredId = nil
         }
@@ -284,7 +286,9 @@ final class FloatingBar: NSObject, NSWindowDelegate {
 
     /// Right-click on a dot: details about that session, then Close.
     private func showContextMenu(with event: NSEvent, in view: NSView) {
-        guard let id = hoveredId,
+        // hoveredId can go stale if an exit event was lost while a menu was
+        // open: only trust it while the cursor is still over a dot.
+        guard let id = hoveredId, NSMouseInRect(NSEvent.mouseLocation, hoveredRect, false),
               let session = store.sessions.first(where: { $0.id == id }) else { return }
         menuSession = session
         panel.removeChildWindow(tooltipPanel)
