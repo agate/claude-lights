@@ -62,4 +62,15 @@ final class ProcessTableTests: XCTestCase {
         XCTAssertEqual(t.claudeCommandCount(claudePid: 800), 2)
         XCTAssertEqual(t.claudeCommandCount(claudePid: 999), 0)
     }
+
+    func testClaudeCommandGroupsAreTheCommandsOwnGroups() {
+        let t = ProcessTable.parse("""
+          800     1   800   800 claude
+          810   800   810   810 /bin/zsh -c source /Users/dev/.claude/shell-snapshots/snapshot-zsh-1-a.sh && eval 'npm run dev'
+          811   800   811   811 /bin/zsh -c source /Users/dev/.claude/shell-snapshots/snapshot-zsh-1-a.sh && eval 'sleep 99'
+          813   800   800   800 node /Users/dev/mcp/server.js
+        """)
+        XCTAssertEqual(t.claudeCommandGroups(claudePid: 800), [810, 811])
+        XCTAssertEqual(t.claudeCommandGroups(claudePid: 999), [])
+    }
 }

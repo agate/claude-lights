@@ -58,8 +58,19 @@ public struct ProcessTable: Sendable {
     /// child `zsh -c source …/shell-snapshots/snapshot-…`. Includes the
     /// foreground command, if any; MCP servers and helpers are not counted.
     public func claudeCommandCount(claudePid: Int) -> Int {
+        claudeCommandPids(claudePid: claudePid).count
+    }
+
+    /// Process groups of those commands. Each Bash tool call leads its own
+    /// group, so stopping Claude or its pane does not reach them; Close
+    /// signals these groups directly.
+    public func claudeCommandGroups(claudePid: Int) -> [Int] {
+        Array(Set(claudeCommandPids(claudePid: claudePid).compactMap { procs[$0]?.pgid })).sorted()
+    }
+
+    private func claudeCommandPids(claudePid: Int) -> [Int] {
         procs[claudePid]?.children.filter {
             procs[$0]?.args.contains("/shell-snapshots/snapshot-") == true
-        }.count ?? 0
+        } ?? []
     }
 }
