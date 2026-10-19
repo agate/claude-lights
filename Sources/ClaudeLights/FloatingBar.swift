@@ -103,6 +103,13 @@ struct BarView: View {
 private final class FirstMouseHostingView: NSHostingView<BarView> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    /// Right-click on the bar; the bar resolves which dot from hover state.
+    var onRightMouseDown: ((NSEvent, NSView) -> Void)?
+
+    override func rightMouseDown(with event: NSEvent) {
+        if let onRightMouseDown { onRightMouseDown(event, self) } else { super.rightMouseDown(with: event) }
+    }
+
     /// Accepting first mouse is what makes clicks work here, but it also
     /// makes this view claim every mouse-down — so AppKit's
     /// `isMovableByWindowBackground` drag never got a chance to start and the
@@ -129,6 +136,13 @@ final class FloatingBar: NSObject, NSWindowDelegate {
     private var isProgrammaticMove = false
     private var snapDebounce: DispatchWorkItem?
 
+    /// Set by AppDelegate: the context menu's Close item (confirms first).
+    var onCloseSession: ((Session) -> Void)?
+    /// The dot under the cursor, by session id (from the hover reporters).
+    private var hoveredId: String?
+    /// Session the open context menu is about.
+    private var menuSession: Session?
+
     private let tooltipPanel: NSPanel
     private let tooltipLabel = NSTextField(labelWithString: "")
 
@@ -151,12 +165,16 @@ final class FloatingBar: NSObject, NSWindowDelegate {
         panel.isFloatingPanel = true
         panel.becomesKeyOnlyIfNeeded = true
         panel.delegate = self
-        panel.contentView = FirstMouseHostingView(rootView: BarView(
+        let host = FirstMouseHostingView(rootView: BarView(
             store: store,
             onJump: onJump,
             onHover: { [weak self] session, hovering, anchor in
                 self?.handleHover(session, hovering: hovering, anchor: anchor)
             }))
+        panel.contentView = host
+        host.onRightMouseDown = { [weak self] event, view in
+            self?.showContextMenu(with: event, in: view)
+        }
 
         configureTooltipPanel()
         restoreOrigin()
@@ -237,6 +255,11 @@ final class FloatingBar: NSObject, NSWindowDelegate {
     }
 
     private func handleHover(_ session: Session, hovering: Bool, anchor: NSRect) {
+        if hovering {
+            hoveredId = session.id
+        } else if hoveredId == session.id {
+            hoveredId = nil
+        }
         guard hovering else {
             panel.removeChildWindow(tooltipPanel)
             tooltipPanel.orderOut(nil)
@@ -257,6 +280,72 @@ final class FloatingBar: NSObject, NSWindowDelegate {
         tooltipPanel.setFrameOrigin(NSPoint(x: x, y: y))
         panel.addChildWindow(tooltipPanel, ordered: .above)
         tooltipPanel.orderFrontRegardless()
+    }
+
+    /// Right-click on a dot: details about that session, then Close.
+    private func showContextMenu(with event: NSEvent, in view: NSView) {
+        guard let id = hoveredId,
+              let session = store.sessions.first(where: { $0.id == id }) else { return }
+        menuSession = session
+        panel.removeChildWindow(tooltipPanel)
+        tooltipPanel.orderOut(nil)
+
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        func info(_ title: String, secondary: Bool = false) {
+            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            if secondary {
+                item.attributedTitle = NSAttributedString(string: title, attributes: [
+                    .font: NSFont.menuFont(ofSize: NSFont.smallSystemFontSize),
+                    .foregroundColor: NSColor.secondaryLabelColor])
+            }
+            menu.addItem(item)
+        }
+        info(session.displayName)
+        menu.addItem(.separator())
+
+        let home = NSHomeDirectory()
+        let path = session.cwd.hasPrefix(home) ? "~" + session.cwd.dropFirst(home.count) : session.cwd
+        let pathItem = NSMenuItem(title: path, action: #selector(copyPath), keyEquivalent: "")
+        pathItem.target = self
+        pathItem.toolTip = "Copy path"
+        menu.addItem(pathItem)
+        info([session.statusText, session.waitingFor].compactMap { $0 }.joined(separator: " · "))
+        info(session.locationLine)
+        if let version = session.version { info("Claude Code \(version)") }
+
+        let url = TranscriptReader.transcriptURL(cwd: session.cwd, sessionId: session.id)
+        if let summary = TranscriptReader.sessionSummary(
+            fromJSONLines: TranscriptReader.tailLines(of: url, maxBytes: 2 * 1024 * 1024)) {
+            menu.addItem(.separator())
+            switch summary.kind {
+            case .recap:
+                let age = AgeFormatter.string(from: summary.date)
+                info(age.isEmpty ? "Recap" : "Recap · \(age)")
+            case .lastPrompt:
+                info("Last prompt")
+            }
+            TranscriptReader.wrap(summary.text).forEach { info($0, secondary: true) }
+        }
+
+        menu.addItem(.separator())
+        let close = NSMenuItem(title: "Close “\(session.displayName)”…",
+                               action: #selector(closeMenuSession), keyEquivalent: "")
+        close.target = self
+        menu.addItem(close)
+        NSMenu.popUpContextMenu(menu, with: event, for: view)
+    }
+
+    @objc private func copyPath() {
+        guard let session = menuSession else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(session.cwd, forType: .string)
+    }
+
+    @objc private func closeMenuSession() {
+        guard let session = menuSession else { return }
+        onCloseSession?(session)
     }
 
     /// Re-fit size and show/hide according to session count and user toggle.

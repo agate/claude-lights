@@ -42,6 +42,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusController.onCloseSession = { [weak self] session in
             self?.confirmClose(session)
         }
+        bar.onCloseSession = { [weak self] session in
+            self?.confirmClose(session)
+        }
         statusController.onToggleBar = { [weak self] in
             guard let self else { return }
             self.bar.toggle()
