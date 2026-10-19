@@ -71,7 +71,8 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   `claude-loose-sessions` and restored into a tmux session of that name.
   Save only rewrites files of sessions running now. Single-pane windows are
   targeted by window (not `.0`) so `pane-base-index` doesn't matter.
-- **Close session** (⌥ on a tray row, or right-click a bar dot → Close;
+- **Close session** (⌥ turns a tray row into the same details submenu a
+  bar dot's right-click shows — `SessionDetailsMenu` — ending in Close;
   both confirm): stops every live pid of the session (bg record too) and
   the process groups of its Bash commands — each tool call leads its own
   group, so neither SIGTERM to claude nor `kill-pane` reaches them;

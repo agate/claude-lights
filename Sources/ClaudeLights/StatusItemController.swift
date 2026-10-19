@@ -28,6 +28,10 @@ final class StatusItemController: NSObject {
 
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private var sessions: [Session] = []
+    /// ⌥ submenus of the open menu; items target them weakly.
+    private var detailMenus: [SessionDetailsMenu] = []
+    /// Disabled last session row explaining the ⌥ alternates.
+    private static let optionHint = "Hold ⌥ for details and Close"
     private var lastError: String?
     private var spinTimer: Timer?
     private var spinAngle: CGFloat = 0
@@ -115,21 +119,24 @@ final class StatusItemController: NSObject {
             mi.toolTip = "\(session.cwd)\n\(session.derivedName)"
             menu.addItem(mi)
 
-            // ⌥ turns the row into Close, keeping its two-line height so the
-            // menu does not jump while the key is held.
-            let close = NSMenuItem(title: "Close “\(session.displayName)”…",
-                                   action: #selector(closeItem(_:)), keyEquivalent: "")
-            close.attributedTitle = Self.rowTitle(MenuRow(
-                title: close.title,
-                subtitle: CloseTarget.for(session).description(for: session), age: ""))
-            close.target = self
-            // By id, not index: a poll may replace `sessions` while the menu
-            // is open, and a shifted index would close the wrong session.
-            close.representedObject = session.id
-            close.image = mi.image
-            close.isAlternate = true
-            close.keyEquivalentModifierMask = .option
-            menu.addItem(close)
+            // ⌥ turns the row into the same details submenu the bar's
+            // right-click shows (ending in Close), keeping the two-line height
+            // so the menu does not jump while the key is held.
+            let details = SessionDetailsMenu(session: session) { [weak self] in
+                self?.onCloseSession?($0)
+            }
+            detailMenus.append(details)
+            let alt = NSMenuItem(title: session.displayName, action: nil, keyEquivalent: "")
+            alt.attributedTitle = Self.rowTitle(MenuRow(
+                title: session.displayName, subtitle: "Details and Close", age: ""))
+            alt.image = mi.image
+            alt.submenu = details.menu
+            alt.isAlternate = true
+            alt.keyEquivalentModifierMask = .option
+            menu.addItem(alt)
+        }
+        if !sessions.isEmpty {
+            menu.addItem(disabledItem(Self.optionHint, indented: true))
         }
         menu.addItem(.separator())
 
@@ -296,12 +303,6 @@ final class StatusItemController: NSObject {
         onJump?(sessions[sender.tag])
     }
 
-    @objc private func closeItem(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String,
-              let session = sessions.first(where: { $0.id == id }) else { return }
-        onCloseSession?(session)
-    }
-
     @objc private func toggleBar() { onToggleBar?() }
 
     @objc private func quitApp() { NSApp.terminate(nil) }
@@ -367,6 +368,7 @@ extension StatusItemController: NSMenuDelegate {
     // immediately rather than lagging until the next poll.
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
+        detailMenus = []
         onMenuWillOpen?()
         populate(menu, error: lastError)
     }

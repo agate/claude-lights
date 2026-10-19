@@ -141,8 +141,8 @@ final class FloatingBar: NSObject, NSWindowDelegate {
     /// The dot under the cursor, by session id (from the hover reporters).
     private var hoveredId: String?
     private var hoveredRect: NSRect = .zero
-    /// Session the open context menu is about.
-    private var menuSession: Session?
+    /// The open context menu; kept alive because items target it weakly.
+    private var contextMenu: SessionDetailsMenu?
 
     private let tooltipPanel: NSPanel
     private let tooltipLabel = NSTextField(labelWithString: "")
@@ -284,85 +284,18 @@ final class FloatingBar: NSObject, NSWindowDelegate {
         tooltipPanel.orderFrontRegardless()
     }
 
-    /// Points from the menu row's text start to the value column.
-    private static let labelColumn: CGFloat = 76
-
     /// Right-click on a dot: details about that session, then Close.
     private func showContextMenu(with event: NSEvent, in view: NSView) {
         // hoveredId can go stale if an exit event was lost while a menu was
         // open: only trust it while the cursor is still over a dot.
         guard let id = hoveredId, NSMouseInRect(NSEvent.mouseLocation, hoveredRect, false),
               let session = store.sessions.first(where: { $0.id == id }) else { return }
-        menuSession = session
         panel.removeChildWindow(tooltipPanel)
         tooltipPanel.orderOut(nil)
 
-        let menu = NSMenu()
-        menu.autoenablesItems = false
-        // "Label<tab>value" rows: labels small and secondary in a fixed
-        // column, values in the label color. Explicit colors keep the value
-        // readable although the item is disabled.
-        let para = NSMutableParagraphStyle()
-        para.tabStops = [NSTextTab(textAlignment: .left, location: Self.labelColumn)]
-        let small = NSFont.menuFont(ofSize: NSFont.smallSystemFontSize)
-        func row(_ label: String, _ value: String, valueColor: NSColor = .labelColor,
-                 action: Selector? = nil) {
-            let item = NSMenuItem(title: "\(label) \(value)", action: action, keyEquivalent: "")
-            let title = NSMutableAttributedString(string: label + "\t", attributes: [
-                .font: small, .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: para])
-            title.append(NSAttributedString(string: value, attributes: [
-                .font: NSFont.menuFont(ofSize: 0), .foregroundColor: valueColor, .paragraphStyle: para]))
-            item.attributedTitle = title
-            if action != nil { item.target = self } else { item.isEnabled = false }
-            menu.addItem(item)
-        }
-
-        let title = NSMenuItem(title: session.displayName, action: nil, keyEquivalent: "")
-        title.isEnabled = false
-        menu.addItem(title)
-        menu.addItem(.separator())
-
-        let home = NSHomeDirectory()
-        let path = session.cwd.hasPrefix(home) ? "~" + session.cwd.dropFirst(home.count) : session.cwd
-        row("Directory", String(path), action: #selector(copyPath))
-        menu.items.last?.toolTip = "Click to copy the full path"
-
-        let url = TranscriptReader.transcriptURL(cwd: session.cwd, sessionId: session.id)
-        if let summary = TranscriptReader.sessionSummary(
-            fromJSONLines: TranscriptReader.tailLines(of: url, maxBytes: 2 * 1024 * 1024)) {
-            let source: String
-            switch summary.kind {
-            case .recap:
-                let age = AgeFormatter.string(from: summary.date)
-                source = age.isEmpty ? "Claude's recap" : "Claude's recap, \(age)"
-            case .lastPrompt:
-                source = "Your last prompt (no recap yet)"
-            }
-            row("Summary", source, valueColor: .secondaryLabelColor)
-            // One text wrapped over several rows, aligned under the values.
-            TranscriptReader.wrap(summary.text).forEach { row("", $0) }
-        }
-        row("Status", [session.statusText, session.waitingFor].compactMap { $0 }.joined(separator: " · "))
-        row("Runs in", session.locationLine)
-        if let version = session.version { row("Version", "Claude Code \(version)") }
-
-        menu.addItem(.separator())
-        let close = NSMenuItem(title: "Close “\(session.displayName)”…",
-                               action: #selector(closeMenuSession), keyEquivalent: "")
-        close.target = self
-        menu.addItem(close)
-        NSMenu.popUpContextMenu(menu, with: event, for: view)
-    }
-
-    @objc private func copyPath() {
-        guard let session = menuSession else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(session.cwd, forType: .string)
-    }
-
-    @objc private func closeMenuSession() {
-        guard let session = menuSession else { return }
-        onCloseSession?(session)
+        let details = SessionDetailsMenu(session: session) { [weak self] in self?.onCloseSession?($0) }
+        contextMenu = details
+        NSMenu.popUpContextMenu(details.populatedMenu(), with: event, for: view)
     }
 
     /// Re-fit size and show/hide according to session count and user toggle.

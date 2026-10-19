@@ -50,6 +50,16 @@ cleaning up.
 - **Summary = the newest recap, else the last prompt.** No live model call.
 - **Left-click on a dot is unchanged** (still jumps).
 
+## Revision (2026-10-19, after first use)
+
+- The tray's ⌥ alternate is no longer a direct `Close “name”…` row: it
+  opens the same details submenu as the bar's right-click (one shared
+  `SessionDetailsMenu`), whose last item is Close. A disabled
+  `Hold ⌥ for details and Close` row ends the session list, like Restore's
+  delete hint.
+- Detail rows are labeled: Directory, Summary (names its source: Claude's
+  recap with its age, or your last prompt), Status, Runs in, Version.
+
 ## Behavior details
 
 ### Ending the Claude process
