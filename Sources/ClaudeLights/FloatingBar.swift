@@ -284,6 +284,9 @@ final class FloatingBar: NSObject, NSWindowDelegate {
         tooltipPanel.orderFrontRegardless()
     }
 
+    /// Points from the menu row's text start to the value column.
+    private static let labelColumn: CGFloat = 76
+
     /// Right-click on a dot: details about that session, then Close.
     private func showContextMenu(with event: NSEvent, in view: NSView) {
         // hoveredId can go stale if an exit event was lost while a menu was
@@ -296,42 +299,52 @@ final class FloatingBar: NSObject, NSWindowDelegate {
 
         let menu = NSMenu()
         menu.autoenablesItems = false
-        func info(_ title: String, secondary: Bool = false) {
-            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            if secondary {
-                item.attributedTitle = NSAttributedString(string: title, attributes: [
-                    .font: NSFont.menuFont(ofSize: NSFont.smallSystemFontSize),
-                    .foregroundColor: NSColor.secondaryLabelColor])
-            }
+        // "Label<tab>value" rows: labels small and secondary in a fixed
+        // column, values in the label color. Explicit colors keep the value
+        // readable although the item is disabled.
+        let para = NSMutableParagraphStyle()
+        para.tabStops = [NSTextTab(textAlignment: .left, location: Self.labelColumn)]
+        let small = NSFont.menuFont(ofSize: NSFont.smallSystemFontSize)
+        func row(_ label: String, _ value: String, valueColor: NSColor = .labelColor,
+                 action: Selector? = nil) {
+            let item = NSMenuItem(title: "\(label) \(value)", action: action, keyEquivalent: "")
+            let title = NSMutableAttributedString(string: label + "\t", attributes: [
+                .font: small, .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: para])
+            title.append(NSAttributedString(string: value, attributes: [
+                .font: NSFont.menuFont(ofSize: 0), .foregroundColor: valueColor, .paragraphStyle: para]))
+            item.attributedTitle = title
+            if action != nil { item.target = self } else { item.isEnabled = false }
             menu.addItem(item)
         }
-        info(session.displayName)
+
+        let title = NSMenuItem(title: session.displayName, action: nil, keyEquivalent: "")
+        title.isEnabled = false
+        menu.addItem(title)
         menu.addItem(.separator())
 
         let home = NSHomeDirectory()
         let path = session.cwd.hasPrefix(home) ? "~" + session.cwd.dropFirst(home.count) : session.cwd
-        let pathItem = NSMenuItem(title: path, action: #selector(copyPath), keyEquivalent: "")
-        pathItem.target = self
-        pathItem.toolTip = "Copy path"
-        menu.addItem(pathItem)
-        info([session.statusText, session.waitingFor].compactMap { $0 }.joined(separator: " · "))
-        info(session.locationLine)
-        if let version = session.version { info("Claude Code \(version)") }
+        row("Directory", String(path), action: #selector(copyPath))
+        menu.items.last?.toolTip = "Click to copy the full path"
 
         let url = TranscriptReader.transcriptURL(cwd: session.cwd, sessionId: session.id)
         if let summary = TranscriptReader.sessionSummary(
             fromJSONLines: TranscriptReader.tailLines(of: url, maxBytes: 2 * 1024 * 1024)) {
-            menu.addItem(.separator())
+            let source: String
             switch summary.kind {
             case .recap:
                 let age = AgeFormatter.string(from: summary.date)
-                info(age.isEmpty ? "Recap" : "Recap · \(age)")
+                source = age.isEmpty ? "Claude's recap" : "Claude's recap, \(age)"
             case .lastPrompt:
-                info("Last prompt")
+                source = "Your last prompt (no recap yet)"
             }
-            TranscriptReader.wrap(summary.text).forEach { info($0, secondary: true) }
+            row("Summary", source, valueColor: .secondaryLabelColor)
+            // One text wrapped over several rows, aligned under the values.
+            TranscriptReader.wrap(summary.text).forEach { row("", $0) }
         }
+        row("Status", [session.statusText, session.waitingFor].compactMap { $0 }.joined(separator: " · "))
+        row("Runs in", session.locationLine)
+        if let version = session.version { row("Version", "Claude Code \(version)") }
 
         menu.addItem(.separator())
         let close = NSMenuItem(title: "Close “\(session.displayName)”…",
