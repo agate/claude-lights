@@ -174,10 +174,20 @@ final class StatusItemController: NSObject {
         toggle.image = isBarShown() ? Self.checkOnImage : Self.spacerImage
         menu.addItem(toggle)
 
-        let sounds = NSMenuItem(title: "Notification Sounds", action: #selector(toggleSounds), keyEquivalent: "")
+        let notifications = NSMenuItem(title: "Notifications", action: nil, keyEquivalent: "")
+        notifications.image = Self.spacerImage
+        let notifySub = NSMenu()
+        let banners = NSMenuItem(title: "Banners", action: #selector(toggleBanners),
+                                 keyEquivalent: "")
+        banners.target = self
+        banners.state = Notifier.bannersEnabled ? .on : .off
+        notifySub.addItem(banners)
+        let sounds = NSMenuItem(title: "Sounds", action: #selector(toggleSounds), keyEquivalent: "")
         sounds.target = self
-        sounds.image = Notifier.soundsEnabled ? Self.checkOnImage : Self.spacerImage
-        menu.addItem(sounds)
+        sounds.state = Notifier.soundsEnabled ? .on : .off
+        notifySub.addItem(sounds)
+        notifications.submenu = notifySub
+        menu.addItem(notifications)
 
         let mono = NSMenuItem(title: "Monochrome Icons", action: #selector(toggleMonochrome),
                               keyEquivalent: "")
@@ -343,6 +353,8 @@ final class StatusItemController: NSObject {
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(nil)
     }
+
+    @objc private func toggleBanners() { Notifier.bannersEnabled.toggle() }
 
     @objc private func toggleSounds() { Notifier.soundsEnabled.toggle() }
 

@@ -143,7 +143,11 @@ first time.
   them, so unread results stand out.
 - **Notifications** fire (banner + sound) when a session turns red or
   finishes working — silenced automatically when you're already looking at
-  that session's window. Toggle sound with **Notification Sounds** in the menu.
+  that session's window. **Notifications ▸ Banners** and **Notifications ▸
+  Sounds** toggle the two separately: banners off still plays the sound,
+  sounds off still shows the banner. Results of your own menu actions (Save,
+  Restore, Delete, a failed Close) and update offers still show, and action
+  results clear themselves from Notification Center after a few seconds.
 - **Menu extras**: **Show Light Bar**, **Monochrome Icons** (system-tinted
   template icons for the menu bar and menu, following light/dark mode),
   **Launch at Login** (requires the .app bundle), **Check for Updates…**,

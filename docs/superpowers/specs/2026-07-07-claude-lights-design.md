@@ -169,6 +169,11 @@ Swift + AppKit/SwiftUI menu bar app (`LSUIElement`, no Dock icon). Four modules:
   `UserNotifications` banner + sound. Title: project name. Body: derived
   name + what it is waiting for, extracted from the transcript tail and
   truncated to one line. Clicking the notification jumps to the session.
+  Tray **Notifications ▸ Banners** and **▸ Sounds** (both default on) are
+  independent: banners off still plays the Ping sound, sounds off still
+  posts a silent banner. Action-result banners (Save/Restore/Delete/Close errors) and update
+  offers ignore both toggles; action results are removed from Notification
+  Center 10 s after posting so they don't pile up.
 
 ## Edge cases
 

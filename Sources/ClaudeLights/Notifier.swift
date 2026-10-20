@@ -4,6 +4,20 @@ import ClaudeLightsCore
 
 final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     static let soundsKey = "notificationSounds"
+    static let bannersKey = "sessionBanners"
+    /// Seconds an action banner stays in Notification Center after posting;
+    /// long enough for the banner itself to finish showing.
+    private static let infoLifetime: TimeInterval = 10
+
+    /// User toggle from the tray menu (needs-you / done banners), independent
+    /// of `soundsEnabled`; defaults to on.
+    static var bannersEnabled: Bool {
+        get {
+            UserDefaults.standard.object(forKey: bannersKey) == nil
+                ? true : UserDefaults.standard.bool(forKey: bannersKey)
+        }
+        set { UserDefaults.standard.set(newValue, forKey: bannersKey) }
+    }
 
     /// User toggle from the tray menu; defaults to on.
     static var soundsEnabled: Bool {
@@ -52,21 +66,27 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     /// Plain informational banner (save/restore results); not clickable.
+    /// Removed from Notification Center shortly after, so action results
+    /// don't pile up there.
     func notifyInfo(title: String, body: String) {
         guard hasBundle, authorized else { return }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        let request = UNNotificationRequest(identifier: "info-\(UUID().uuidString)",
-                                            content: content, trigger: nil)
+        let id = "info-\(UUID().uuidString)"
+        let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.infoLifetime) {
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [id])
+        }
     }
 
     private func post(_ session: Session, title: String, body: String) {
         // Stay silent when the user is already looking at this session's
         // window, or when sounds are toggled off in the menu.
         let silent = session.isOnScreen || !Notifier.soundsEnabled
-        guard hasBundle, authorized else {
+        // Banners off: the sound still plays on its own.
+        guard Notifier.bannersEnabled, hasBundle, authorized else {
             if !silent { NSSound(named: "Ping")?.play() }
             return
         }
