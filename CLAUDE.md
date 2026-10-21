@@ -98,7 +98,9 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   `~/.claude/sessions/` like any session; it runs from
   `~/Library/Caches/ClaudeLights/usage-probe` and the poller drops that cwd.
   Weekly per-model limits (Fable) and credit exist only in this response,
-  never in rate-limit headers. Demo: `CLAUDE_LIGHTS_DEMO_USAGE_FILE`; with a
+  never in rate-limit headers. Credit has **no** reset time in the answer:
+  `/usage` itself computes the 1st of next month, local midnight
+  (`CreditUsage.nextReset`). Demo: `CLAUDE_LIGHTS_DEMO_USAGE_FILE`; with a
   demo `CLAUDE_LIGHTS_SESSIONS_DIR` and no usage file, no probe runs.
 
 ## Open issue

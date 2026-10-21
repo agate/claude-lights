@@ -13,6 +13,8 @@ final class UsageMenuView: NSView {
     private static let headerHeight: CGFloat = 24
     private static let rowHeight: CGFloat = 27
     private static let buttonSide: CGFloat = 18
+    /// Least space between a row's title and its right-aligned detail.
+    private static let titleGap: CGFloat = 16
 
     private var rows: [UsageRow] = []
     private var updated = ""
@@ -61,7 +63,13 @@ final class UsageMenuView: NSView {
     }
 
     private func layoutContent() {
-        setFrameSize(NSSize(width: frame.width,
+        // Widen (never narrow) when a title and its detail would overlap,
+        // e.g. "All models (weekly)" with a reset days away.
+        let needed = rows.map {
+            Self.leading + Self.title($0.title).size().width + Self.titleGap
+                + Self.detail($0.detail).size().width + Self.trailing
+        }.max() ?? 0
+        setFrameSize(NSSize(width: max(frame.width, needed.rounded(.up)),
                             height: Self.headerHeight + CGFloat(rows.count) * Self.rowHeight + 4))
         button.frame = NSRect(x: frame.width - Self.trailing - Self.buttonSide + 3, y: 3,
                               width: Self.buttonSide, height: Self.buttonSide)
@@ -85,13 +93,8 @@ final class UsageMenuView: NSView {
 
         var y = Self.headerHeight
         for row in rows {
-            NSAttributedString(string: row.title, attributes: [
-                .font: base, .foregroundColor: NSColor.labelColor,
-            ]).draw(at: NSPoint(x: Self.leading, y: y))
-            let detail = NSAttributedString(string: row.detail, attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: small.pointSize, weight: .regular),
-                .foregroundColor: NSColor.secondaryLabelColor,
-            ])
+            Self.title(row.title).draw(at: NSPoint(x: Self.leading, y: y))
+            let detail = Self.detail(row.detail)
             let size = detail.size()
             detail.draw(at: NSPoint(x: right - size.width, y: y + (base.pointSize - small.pointSize) / 2 + 1))
 
@@ -107,5 +110,19 @@ final class UsageMenuView: NSView {
             }
             y += Self.rowHeight
         }
+    }
+
+    private static func title(_ text: String) -> NSAttributedString {
+        NSAttributedString(string: text, attributes: [
+            .font: NSFont.menuFont(ofSize: 0), .foregroundColor: NSColor.labelColor,
+        ])
+    }
+
+    private static func detail(_ text: String) -> NSAttributedString {
+        NSAttributedString(string: text, attributes: [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.menuFont(ofSize: 0).pointSize - 2,
+                                                    weight: .regular),
+            .foregroundColor: NSColor.secondaryLabelColor,
+        ])
     }
 }

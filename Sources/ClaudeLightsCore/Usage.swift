@@ -30,6 +30,16 @@ public struct CreditUsage: Equatable, Sendable {
     public var fractionUsed: Double {
         limitMinor > 0 ? min(max(Double(usedMinor) / Double(limitMinor), 0), 1) : 0
     }
+
+    /// The answer carries no reset time for credit; Claude Code's own /usage
+    /// takes the first of next month at local midnight, and so does this.
+    public static func nextReset(after now: Date, timeZone: TimeZone = .current) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let month = calendar.dateComponents([.year, .month], from: now)
+        let start = calendar.date(from: month) ?? now
+        return calendar.date(byAdding: .month, value: 1, to: start) ?? now
+    }
 }
 
 /// The account's limits as Claude Code's `get_usage` control request reports
@@ -147,11 +157,15 @@ public enum UsageMenu {
     public static func rows(_ report: UsageReport, now: Date,
                             timeZone: TimeZone = .current, locale: Locale = .current) -> [UsageRow] {
         var rows: [UsageRow] = []
+        func resetSuffix(_ reset: Date, dateOnly: Bool = false) -> String {
+            var text = " · resets " + resetText(reset, now: now, timeZone: timeZone, locale: locale,
+                                                dateOnly: dateOnly)
+            if let until = untilText(reset, now: now) { text += " · " + until }
+            return text
+        }
         func limitRow(_ title: String, _ limit: UsageLimit) -> UsageRow {
             var detail = leftText(limit)
-            if let reset = limit.resetsAt {
-                detail += " · resets " + resetText(reset, now: now, timeZone: timeZone, locale: locale)
-            }
+            if let reset = limit.resetsAt { detail += resetSuffix(reset) }
             return UsageRow(title: title, detail: detail, fractionUsed: limit.fractionUsed)
         }
         if let session = report.session { rows.append(limitRow("Session (5h)", session)) }
@@ -159,7 +173,8 @@ public enum UsageMenu {
         if let c = report.credit {
             let left = money(c.limitMinor - c.usedMinor, decimals: c.decimals, currency: c.currency)
             let cap = money(c.limitMinor, decimals: c.decimals, currency: c.currency)
-            rows.append(UsageRow(title: "Credit", detail: "\(left) left of \(cap)",
+            let reset = CreditUsage.nextReset(after: now, timeZone: timeZone)
+            rows.append(UsageRow(title: "Credit", detail: "\(left) left of \(cap)" + resetSuffix(reset, dateOnly: true),
                                  fractionUsed: c.fractionUsed))
         }
         return rows
@@ -169,15 +184,41 @@ public enum UsageMenu {
         "\(Int((100 - min(max(limit.percentUsed, 0), 100)).rounded()))% left"
     }
 
-    /// Time only when the reset is today, else weekday + time.
-    static func resetText(_ date: Date, now: Date, timeZone: TimeZone, locale: Locale) -> String {
+    /// Time only when the reset is today, else weekday + time; `dateOnly`
+    /// (monthly credit) gives "Nov 1".
+    static func resetText(_ date: Date, now: Date, timeZone: TimeZone, locale: Locale,
+                          dateOnly: Bool = false) -> String {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         let f = DateFormatter()
         f.locale = locale
         f.timeZone = timeZone
-        f.setLocalizedDateFormatFromTemplate(calendar.isDate(date, inSameDayAs: now) ? "jmm" : "EEEjmm")
+        let template = dateOnly ? "MMMd" : calendar.isDate(date, inSameDayAs: now) ? "jmm" : "EEEjmm"
+        f.setLocalizedDateFormatFromTemplate(template)
         return f.string(from: date)
+    }
+
+    /// "in 20m", "in 1.5h", "in 6.5d", "in 1.5w": the largest unit that
+    /// reaches 1, one decimal below 10 and whole from there. Nil once the
+    /// reset is past (a stale report).
+    public static func untilText(_ date: Date, now: Date) -> String? {
+        let seconds = date.timeIntervalSince(now)
+        guard seconds > 0 else { return nil }
+        func amount(_ value: Double) -> Double {
+            value < 10 ? (value * 10).rounded() / 10 : value.rounded()
+        }
+        func number(_ value: Double) -> String {
+            value == value.rounded() ? String(Int(value)) : String(format: "%.1f", value)
+        }
+        // Each unit is rounded before the next is tried, so 59.9 minutes
+        // reads "1h", never "60m".
+        let minutes = max(1, (seconds / 60).rounded())
+        if minutes < 60 { return "in \(Int(minutes))m" }
+        let hours = amount(seconds / 3600)
+        if hours < 24 { return "in \(number(hours))h" }
+        let days = amount(seconds / 86400)
+        if days < 7 { return "in \(number(days))d" }
+        return "in \(number(amount(seconds / (7 * 86400))))w"
     }
 
     /// "$191.90"; whole amounts drop the zero cents ("$200"). Negative → 0.
@@ -193,8 +234,8 @@ public enum UsageMenu {
     public static func updatedText(fetchedAt: Date, now: Date) -> String {
         let minutes = Int(now.timeIntervalSince(fetchedAt) / 60)
         if minutes < 1 { return "Updated just now" }
-        if minutes < 60 { return "Updated \(minutes) min ago" }
-        return "Updated \(minutes / 60) h ago"
+        if minutes < 60 { return "Updated \(minutes)m ago" }
+        return "Updated \(minutes / 60)h ago"
     }
 }
 

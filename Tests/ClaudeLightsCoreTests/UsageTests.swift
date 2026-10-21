@@ -130,9 +130,49 @@ final class UsageTests: XCTestCase {
         XCTAssertEqual(r.map(\.title), ["Session (5h)", "Fable (weekly)", "Credit"])
         // ICU puts a narrow no-break space before AM/PM.
         let detail = { (i: Int) in r[i].detail.replacingOccurrences(of: "\u{202F}", with: " ") }
-        XCTAssertEqual(detail(0), "91% left · resets 7:40 PM")
-        XCTAssertEqual(detail(1), "94% left · resets Thu 10:00 AM")
-        XCTAssertEqual(r[2].detail, "$191.90 left of $200")
+        XCTAssertEqual(detail(0), "91% left · resets 7:40 PM · in 9.7h")
+        XCTAssertEqual(detail(1), "94% left · resets Thu 10:00 AM · in 1d")
+        XCTAssertEqual(r[2].detail, "$191.90 left of $200 · resets Nov 1 · in 1.5w")
+    }
+
+    func testPastResetHasNoCountdown() {
+        let now = ISO8601DateFormatter().date(from: "2026-10-21T20:00:00Z")!
+        let detail = rows(now: now)[0].detail.replacingOccurrences(of: "\u{202F}", with: " ")
+        XCTAssertEqual(detail, "91% left · resets 7:40 PM")
+    }
+
+    func testUntilText() {
+        let now = Self.fetchedAt
+        func until(_ seconds: TimeInterval) -> String? {
+            UsageMenu.untilText(now.addingTimeInterval(seconds), now: now)
+        }
+        XCTAssertEqual(until(30), "in 1m")
+        XCTAssertEqual(until(20 * 60), "in 20m")
+        XCTAssertEqual(until(59 * 60 + 50), "in 1h")            // never "in 60m"
+        XCTAssertEqual(until(88 * 60), "in 1.5h")               // not "1h 28m"
+        XCTAssertEqual(until(2 * 3600), "in 2h")
+        XCTAssertEqual(until(10 * 3600 + 48 * 60), "in 11h")    // 10 and up: whole numbers
+        XCTAssertEqual(until(23 * 3600 + 58 * 60), "in 1d")     // never "in 24h"
+        XCTAssertEqual(until(6.5 * 86400), "in 6.5d")
+        XCTAssertEqual(until(6.98 * 86400), "in 1w")            // never "in 7d"
+        XCTAssertEqual(until(10.6 * 86400), "in 1.5w")
+        XCTAssertNil(until(0))
+        XCTAssertNil(until(-60))
+    }
+
+    func testCreditResetsOnTheFirstOfNextMonth() {
+        let iso = ISO8601DateFormatter()
+        let utc = TimeZone(identifier: "UTC")!
+        XCTAssertEqual(CreditUsage.nextReset(after: iso.date(from: "2026-10-21T10:00:00Z")!, timeZone: utc),
+                       iso.date(from: "2026-11-01T00:00:00Z"))
+        XCTAssertEqual(CreditUsage.nextReset(after: iso.date(from: "2026-12-15T10:00:00Z")!, timeZone: utc),
+                       iso.date(from: "2027-01-01T00:00:00Z"))
+        XCTAssertEqual(CreditUsage.nextReset(after: iso.date(from: "2026-11-01T00:00:00Z")!, timeZone: utc),
+                       iso.date(from: "2026-12-01T00:00:00Z"))
+        // Local midnight: 10 PM Oct 31 in California is already Nov 1 in UTC.
+        let la = TimeZone(identifier: "America/Los_Angeles")!
+        XCTAssertEqual(CreditUsage.nextReset(after: iso.date(from: "2026-11-01T05:00:00Z")!, timeZone: la),
+                       iso.date(from: "2026-11-01T07:00:00Z"))
     }
 
     func testRowFractions() {
@@ -159,8 +199,8 @@ final class UsageTests: XCTestCase {
     func testUpdatedText() {
         let t = Self.fetchedAt
         XCTAssertEqual(UsageMenu.updatedText(fetchedAt: t, now: t.addingTimeInterval(20)), "Updated just now")
-        XCTAssertEqual(UsageMenu.updatedText(fetchedAt: t, now: t.addingTimeInterval(130)), "Updated 2 min ago")
-        XCTAssertEqual(UsageMenu.updatedText(fetchedAt: t, now: t.addingTimeInterval(7300)), "Updated 2 h ago")
+        XCTAssertEqual(UsageMenu.updatedText(fetchedAt: t, now: t.addingTimeInterval(130)), "Updated 2m ago")
+        XCTAssertEqual(UsageMenu.updatedText(fetchedAt: t, now: t.addingTimeInterval(7300)), "Updated 2h ago")
     }
 
     func testStale() {

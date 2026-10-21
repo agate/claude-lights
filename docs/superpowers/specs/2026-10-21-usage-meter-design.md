@@ -53,11 +53,11 @@ claude -p --input-format stream-json --output-format stream-json --verbose \
 A "Usage" section at the top of the menu (above the session list):
 
 ```
-Usage                       Updated 2 min ago  ↻
-Session (5h)       91% left · resets 3:40 AM
+Usage                                     Updated 2m ago  ↻
+Session (5h)          91% left · resets 3:40 AM · in 1.5h
 ████░░░░░░░░
-Fable (weekly)     94% left · resets Thu 6:00 PM
-Credit             $191.90 left of $200
+Fable (weekly)       94% left · resets Thu 6:00 PM · in 2.5d
+Credit        $191.90 left of $200 · resets Nov 1 · in 1.5w
 ```
 
 The ↻ button fetches now; the header reads "Updating…" until the answer
@@ -72,6 +72,15 @@ all the section is omitted.
 ## Builder's calls
 
 - Reset time: time only if today, else weekday + time, in the user's locale.
+  Credit shows the date only ("Nov 1").
+- Time until the reset follows it: the largest unit that reaches 1 (m, h, d,
+  w), one decimal below 10 and whole from there ("in 20m", "in 1.5h",
+  "in 6.5d", "in 1.5w", "in 11h"), never "1h 28m". Hidden once the reset is past.
+- Credit's reset is not in the answer (`extra_usage` has no `resets_at`).
+  Claude Code's own `/usage` computes it as the first of next month at local
+  midnight; so does the app, so the two always agree.
+- When a title and its detail would overlap (e.g. "All models (weekly)"), the
+  section widens the menu rather than cutting text.
 - Menu text in English, like the rest of the menu.
 - Opening the menu does not trigger a fetch.
 - Failures go to `~/Library/Logs/ClaudeLights/usage.log`, each distinct error
