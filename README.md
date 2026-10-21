@@ -101,8 +101,10 @@ first time.
   Claude plan's 5-hour session limit is used — no number, in the menu bar's
   own color, faded when the data is more than 45 minutes old. The menu's
   **Usage** section (at the top) shows what is left of the 5-hour limit,
-  each weekly limit (e.g. **Fable (weekly)**) with its reset time, and your
-  extra-usage **Credit**; its header says when it was updated and has a
+  each weekly limit (e.g. **Fable (weekly)**) and your extra-usage
+  **Credit**, each with when it resets and how long until then
+  (`resets 5:39 PM · in 1.5h`; credit resets on the 1st of the month, as
+  `/usage` says); its header says when it was updated and has a
   **↻** button to refresh right away. Every 30 minutes the app asks Claude
   Code for the same data `/usage` shows (`claude -p` with a `get_usage`
   request: no model call, no cost, your login never leaves Claude Code;
