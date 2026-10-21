@@ -88,7 +88,8 @@ final class Poller {
         if !FileManager.default.fileExists(atPath: SessionRegistry.defaultDir.path) {
             error = "Claude Code session registry not found (~/.claude/sessions)"
         }
-        let records = SessionRegistry.load()
+        // The usage probe is a real claude process; it must not show as a dot.
+        let records = SessionRegistry.load().filter { !UsageProbe.isProbe($0) }
 
         let pids = records.compactMap {
             $0.kind == "interactive" || $0.kind == "bg" ? $0.pid : nil

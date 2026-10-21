@@ -89,6 +89,18 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   ignored. Silent — errors only go to `~/Library/Logs/ClaudeLights/autosave.log`
   (1 MB, one `.1` rotation), each distinct error logged once.
 
+- **Usage meter** (docs/superpowers/specs/2026-10-21-usage-meter-design.md):
+  `~/.claude.json`'s `cachedUsageUtilization` is only rewritten when `/usage`
+  opens, an SDK `get_usage` arrives, or once a day — too stale. So every 30
+  min (and on the menu's ↻ button) `UsageMonitor` runs `claude -p` stream-json with one `get_usage` control
+  request (no model call, ~1 s, hooks + MCP off) and parses stdout, not the
+  cache (the CLI throttles cache writes). The probe registers in
+  `~/.claude/sessions/` like any session; it runs from
+  `~/Library/Caches/ClaudeLights/usage-probe` and the poller drops that cwd.
+  Weekly per-model limits (Fable) and credit exist only in this response,
+  never in rate-limit headers. Demo: `CLAUDE_LIGHTS_DEMO_USAGE_FILE`; with a
+  demo `CLAUDE_LIGHTS_SESSIONS_DIR` and no usage file, no probe runs.
+
 ## Open issue
 - App is **ad-hoc signed** (no Team ID). macOS Automation (AppleScript)
   permission is fragile across reboots/rebuilds — jump can silently stop

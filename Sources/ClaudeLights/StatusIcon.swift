@@ -203,3 +203,50 @@ enum StatusIcon {
                                                  height: CGFloat(cropH) / scale))
     }
 }
+
+/// Tray only: the state disc with the 5h usage meter beside it — a vertical
+/// bar filled bottom-up, no number. The meter never uses a state color: it is
+/// the menu bar's own ink (white on a dark bar, black on a light one; the
+/// template silhouette in monochrome), faded when the data is stale.
+enum UsageMeterIcon {
+    static let width: CGFloat = 5
+    static let gap: CGFloat = 2
+    /// Fill quantized to these steps — finer than the bar's pixels, and it
+    /// bounds the cache (the spinner already multiplies it by 30 angles).
+    private static let steps = 26
+
+    private static var cache: [String: NSImage] = [:]
+
+    static func image(disc: NSImage, light: LightState, rotation: CGFloat, monochrome: Bool,
+                      fraction: Double, stale: Bool, darkMenuBar: Bool) -> NSImage {
+        let step = Int((min(max(fraction, 0), 1) * Double(steps)).rounded())
+        let key = "\(light)-\(rotation)-\(monochrome)-\(step)-\(stale)-\(darkMenuBar)"
+        if let cached = cache[key] { return cached }
+        let height = disc.size.height
+        let size = NSSize(width: disc.size.width + gap + width + 1, height: height)
+        let ink: NSColor = monochrome || !darkMenuBar ? .black : .white
+        let alpha: CGFloat = stale ? 0.35 : 0.85
+        let image = NSImage(size: size, flipped: false) { _ in
+            disc.draw(at: .zero, from: .zero, operation: .sourceOver, fraction: 1)
+            // Same height as the disc's circle (the disc image has a 1 pt margin).
+            let outer = NSRect(x: disc.size.width + gap, y: 1.5, width: width, height: height - 3)
+            ink.withAlphaComponent(alpha).set()
+            let outline = NSBezierPath(roundedRect: outer.insetBy(dx: 0.5, dy: 0.5),
+                                       xRadius: 1.5, yRadius: 1.5)
+            outline.lineWidth = 1
+            outline.stroke()
+            if step > 0 {
+                let inner = outer.insetBy(dx: 1.5, dy: 1.5)
+                // At least 1 pt so a few percent is still visible.
+                let h = max(1, inner.height * CGFloat(step) / CGFloat(steps))
+                NSBezierPath(roundedRect: NSRect(x: inner.minX, y: inner.minY,
+                                                 width: inner.width, height: h),
+                             xRadius: 0.5, yRadius: 0.5).fill()
+            }
+            return true
+        }
+        image.isTemplate = monochrome
+        cache[key] = image
+        return image
+    }
+}

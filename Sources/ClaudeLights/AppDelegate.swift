@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let notifier = Notifier()
     private let frontmostWatcher = FrontmostWatcher()
     private let updater: UpdaterEngine = GitHubUpdater()
+    private let usageMonitor = UsageMonitor()
     private var statusController: StatusItemController!
     private var bar: FloatingBar!
 
@@ -101,6 +102,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         poller.start()
+
+        usageMonitor.onUpdate = { [weak self] report in self?.statusController.usage = report }
+        usageMonitor.onFailure = { [weak self] in self?.statusController.usageRefreshFailed() }
+        usageMonitor.onSignedOut = { [weak self] in self?.statusController.usage = nil }
+        statusController.onRefreshUsage = { [weak self] in self?.usageMonitor.refreshNow() }
+        usageMonitor.start()
 
         if ProcessInfo.processInfo.environment["CLAUDE_LIGHTS_DEBUG_CLICK"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in

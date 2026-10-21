@@ -26,7 +26,24 @@ final class StatusItemController: NSObject {
     /// Set when an update is pending, e.g. "v0.3.0"; menu rebuilds on open.
     var pendingUpdateVersion: String?
 
-    private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    /// Latest account usage; nil until the first fetch succeeds (no meter).
+    var usage: UsageReport? {
+        didSet {
+            refreshButtonImage()
+            if let usage { usageView?.show(usage) } // live while the menu is open
+        }
+    }
+    /// The Usage section's refresh button; the answer comes back via `usage`
+    /// (or `usageRefreshFailed()`).
+    var onRefreshUsage: (() -> Void)?
+    private weak var usageView: UsageMenuView?
+
+    /// Ends the refresh button's busy state when a manual fetch failed.
+    func usageRefreshFailed() { usageView?.refreshFailed() }
+
+    // Variable: the usage meter widens the icon.
+    private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    private var appearanceObservation: NSKeyValueObservation?
     private var sessions: [Session] = []
     /// ⌥ submenus of the open menu; items target them weakly.
     private var detailMenus: [SessionDetailsMenu] = []
@@ -42,6 +59,10 @@ final class StatusItemController: NSObject {
         let menu = NSMenu()
         menu.delegate = self // rebuilt on open so toggle states are always live
         item.menu = menu
+        // The meter's ink follows the menu bar (light/dark wallpaper too).
+        appearanceObservation = item.button?.observe(\.effectiveAppearance) { [weak self] _, _ in
+            DispatchQueue.main.async { self?.refreshButtonImage() }
+        }
     }
 
     func update(sessions: [Session], error: String?) {
@@ -61,9 +82,17 @@ final class StatusItemController: NSObject {
     }
 
     private func refreshButtonImage() {
-        item.button?.image = StatusIcon.image(for: aggregate, diameter: 17, margin: 1,
-                                              markRotation: spinAngle,
-                                              monochrome: IconStyle.monochrome)
+        let disc = StatusIcon.image(for: aggregate, diameter: 17, margin: 1,
+                                    markRotation: spinAngle, monochrome: IconStyle.monochrome)
+        guard let session = usage?.session, let button = item.button else {
+            item.button?.image = disc
+            return
+        }
+        let dark = button.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        button.image = UsageMeterIcon.image(
+            disc: disc, light: aggregate, rotation: spinAngle, monochrome: IconStyle.monochrome,
+            fraction: session.fractionUsed, stale: usage?.isStale(now: Date()) ?? false,
+            darkMenuBar: dark)
     }
 
     private func startSpinner() {
@@ -92,6 +121,17 @@ final class StatusItemController: NSObject {
                                 action: #selector(installUpdate), keyEquivalent: "")
             up.target = self
             menu.addItem(up)
+            menu.addItem(.separator())
+        }
+        if let usage, !UsageMenu.rows(usage, now: Date()).isEmpty {
+            let view = UsageMenuView(width: Self.ageColumn + UsageMenuView.leading) { [weak self] in
+                self?.onRefreshUsage?()
+            }
+            view.show(usage)
+            usageView = view
+            let mi = NSMenuItem()
+            mi.view = view
+            menu.addItem(mi)
             menu.addItem(.separator())
         }
         if let error {
