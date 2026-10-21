@@ -461,6 +461,11 @@ html[data-lang='zh'] .compare figcaption b {
   padding: 18px 18px 22px;
 }
 
+/* An odd last cell spans the row instead of leaving a hole. */
+.cell.wide {
+  grid-column: 1 / -1;
+}
+
 .cell b {
   font-family: var(--head);
   font-weight: 400;

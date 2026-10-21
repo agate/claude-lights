@@ -19,7 +19,8 @@ Includes an always-on-top floating light bar, one-click jump to the
 session's tmux window or [herdr](https://github.com/herdrdev/herdr) pane
 (iTerm2, Apple Terminal, or VS Code), a notification with sound when a
 session needs you or finishes, a details menu with one-click **Close** for
-any session, and Save / Restore of your sessions across reboots.
+any session, a usage meter for your plan's limits, and Save / Restore of
+your sessions across reboots.
 
 ![Floating light bar — one dot per session: waiting (!), done (✓), answered with a background task (static gear), idle seen, running (spinning gear), just started](site/media/bar.png)
 
@@ -96,6 +97,18 @@ first time.
   changed, over its state, what it's waiting for (or its project) and ⚙N
   for the commands it's running. Click a row to jump; hold **⌥ Option** and
   a row opens that session's details submenu (see below).
+- **Usage meter**: a small bar right of the menu bar dot fills up as your
+  Claude plan's 5-hour session limit is used — no number, in the menu bar's
+  own color, faded when the data is more than 45 minutes old. The menu's
+  **Usage** section (at the top) shows what is left of the 5-hour limit,
+  each weekly limit (e.g. **Fable (weekly)**) with its reset time, and your
+  extra-usage **Credit**; its header says when it was updated and has a
+  **↻** button to refresh right away. Every 30 minutes the app asks Claude
+  Code for the same data `/usage` shows (`claude -p` with a `get_usage`
+  request: no model call, no cost, your login never leaves Claude Code;
+  hooks and MCP servers are skipped for it). Without a Claude subscription
+  login the meter and section simply don't appear; errors go to
+  `~/Library/Logs/ClaudeLights/usage.log`.
 - **Floating bar**: one dot per session in a fixed order (by launch time), so
   each session keeps its place — only its color changes as it works, waits,
   or finishes. Hover for a one-line summary, click to jump, right-click for

@@ -172,6 +172,27 @@ def close_stray_terminal_windows():
         'end tell')
 
 
+def write_usage():
+    """Made-up plan limits in the shape of Claude Code's get_usage answer, so the demo app never asks
+    the real account (it would not anyway with a demo registry, but then the meter and menu would be empty)."""
+    def at(hours):
+        return time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(time.time() + hours * 3600))
+    limits = {
+        "limits": [
+            {"group": "session", "percent": 38, "resets_at": at(2.4), "scope": None},
+            {"group": "weekly", "percent": 22, "resets_at": at(70),
+             "scope": {"model": {"display_name": "Fable"}}},
+        ],
+        "extra_usage": {"is_enabled": True, "monthly_limit": 10000, "used_credits": 2750,
+                        "currency": "USD", "decimal_places": 2},
+    }
+    answer = {"type": "control_response", "response": {"subtype": "success", "request_id": "usage",
+              "response": {"rate_limits_available": True, "rate_limits": limits}}}
+    path = RUN / "usage.jsonl"
+    path.write_text(json.dumps(answer) + "\n")
+    return path
+
+
 def setup():
     build_helpers()
     for d in (REG, STATE, TMUXDIR, OUT):
@@ -269,9 +290,11 @@ def setup():
     demo_prefs.write_bytes(plistlib.dumps(prefs))
     sh("defaults", "import", BUNDLE, str(demo_prefs))   # `defaults write -array` would store strings
     seen = ids()["blog"]["sid"]
+    usage = write_usage()
     # Not `open -n`: a second instance is refused notification permission and only plays the sound.
     sh("open", str(APP), "--env", f"CLAUDE_LIGHTS_SESSIONS_DIR={REG}",
-       "--env", f"TMUX_TMPDIR={TMUXDIR}", "--env", f"CLAUDE_LIGHTS_DEMO_SEEN_IDS={seen}")
+       "--env", f"TMUX_TMPDIR={TMUXDIR}", "--env", f"CLAUDE_LIGHTS_DEMO_SEEN_IDS={seen}",
+       "--env", f"CLAUDE_LIGHTS_DEMO_USAGE_FILE={usage}")
     time.sleep(3)
     print(json.dumps({"bar": bar_frame(), "status_item": status_item()}))
 

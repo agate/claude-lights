@@ -270,6 +270,44 @@ def close():
     return g.svg(400, 250, "Close: Claude's tmux pane is removed while the shell pane beside it stays open")
 
 
+def usage():
+    """Usage meter: the menu bar dot with a half-full bar beside it, and the menu's Usage rows below."""
+    g = Iso(13, 0, 0)
+    # the menu bar strip, upright, with the aggregate dot and its vertical meter
+    sx, sy, sz = 0, 0, 5.6
+    g.box(sx, sy, sz, 6.0, 0.3, 0.9)
+    fy0 = sy + 0.3
+    for k, x in enumerate((0.5, 1.4)):
+        g.line((x, fy0, sz + 0.45), (x + 0.5, fy0, sz + 0.45), stroke=GRAY)  # other menu bar items
+    dx = 3.6
+    g.circle((dx, fy0, sz + 0.45), 0.3, "xz", fill=AMBER)
+    mx0, mz0, mz1 = dx + 0.55, sz + 0.15, sz + 0.75
+    g.poly([(mx0, fy0, mz0), (mx0 + 0.22, fy0, mz0), (mx0 + 0.22, fy0, mz1), (mx0, fy0, mz1)], fill=TOP)
+    g.poly([(mx0, fy0, mz0), (mx0 + 0.22, fy0, mz0), (mx0 + 0.22, fy0, mz0 + 0.3), (mx0, fy0, mz0 + 0.3)], fill=INK)
+    # the menu card hanging below, its Usage section on top
+    cx, cy, cz, cw, ch = 1.6, 1.4, 0, 9.0, 5.0
+    g.box(cx, cy, cz, cw, 0.2, ch)
+    fy = cy + 0.2
+    def f(u, v):
+        return (cx + u, fy, cz + v)
+    g.line(f(0.4, ch - 0.5), f(1.6, ch - 0.5), stroke=GRAY)   # "Usage"
+    g.line(f(5.6, ch - 0.5), f(7.8, ch - 0.5), stroke=GRAY)   # "Updated just now"
+    (rx, ry) = g.p(*f(8.4, ch - 0.5))                          # refresh arrow
+    g.out.append(f'<path d="M{rx + 3:.1f},{ry - 1.5:.1f} A3.2,3.2 0 1 1 {rx + 1:.1f},{ry - 3:.1f}" '
+                 f'fill="none" stroke="{INK}" stroke-width="1.1"/>')
+    for r, used in enumerate((0.5, 0.25, 0.15)):              # 5h session, weekly, credit
+        v = ch - 1.1 - r * 0.95
+        g.line(f(0.4, v), f(2.6, v))                           # title
+        g.line(f(5.2, v), f(8.6, v), stroke=GRAY)              # "N% left · resets …"
+        g.line(f(0.4, v - 0.42), f(8.6, v - 0.42), stroke=GRAY)                    # meter track
+        g.line(f(0.4, v - 0.42), f(0.4 + 8.2 * used, v - 0.42), stroke=INK, sw=2)  # used share
+    g.line(f(0, 1.2), f(cw, 1.2), stroke=GRAY)                 # the session list follows
+    g.line(f(0.4, 0.8), f(4.0, 0.8))
+    g.line(f(0.4, 0.4), f(3.4, 0.4))
+    g.line((dx, fy0, sz), (cx + 2.0, fy, ch), stroke=AMBER, extra='stroke-dasharray="2 3"')
+    return g.svg(400, 250, "Usage: a small bar beside the menu bar dot fills as the 5-hour limit is used; the menu lists what is left of each limit")
+
+
 def bar_lights(g, x, y, z, states, pitch=2.3, r=0.66):
     """The floating light bar lying flat: one socketed lamp per session."""
     g.box(x, y, z, len(states) * pitch + 0.3, 2.4, 0.7)
@@ -337,6 +375,6 @@ if __name__ == "__main__":
     out.mkdir(parents=True, exist_ok=True)
     for name, fn in {"hero": hero, "hidden": hidden, "floating": floating, "restore": restore,
                      "details": details, "close": close, "lights": lights, "jump": jump,
-                     "notify": notify}.items():
+                     "notify": notify, "usage": usage}.items():
         (out / f"{name}.svg").write_text(fn() + "\n")
         print(f"wrote site/art/{name}.svg")
