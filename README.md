@@ -93,9 +93,10 @@ first time.
 
 - **Menu bar dot** shows the aggregate state — red if any session needs you,
   else the spinning gear if any is running, else green/gray. Click it for a
-  per-session list: each row shows the session's title and how long ago it
-  changed, over its state, what it's waiting for (or its project) and ⚙N
-  for the commands it's running. Click a row to jump; hold **⌥ Option** and
+  per-session list: each row shows the session's title (the name you gave
+  it with `/rename`, else Claude's own title) and how long ago it changed,
+  over its state, what it's waiting for (or its project) and ⚙N for the
+  commands it's running. Click a row to jump; hold **⌥ Option** and
   a row opens that session's details submenu (see below).
 - **Usage meter**: a small bar right of the menu bar dot fills up as your
   Claude plan's 5-hour session limit is used — no number, in the menu bar's

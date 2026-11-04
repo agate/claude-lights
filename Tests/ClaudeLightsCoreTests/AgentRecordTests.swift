@@ -22,6 +22,7 @@ final class AgentRecordTests: XCTestCase {
         XCTAssertEqual(r?.status, "busy")
         XCTAssertEqual(r?.statusUpdatedAt, 1783872850584)
         XCTAssertEqual(r?.cwd, "/Users/dev")
+        XCTAssertEqual(r?.nameSource, "derived")
     }
 
     // Real waiting-state registry content captured live on 2.1.207 (Task 13)

@@ -9,6 +9,9 @@ public struct AgentRecord: Decodable, Equatable, Sendable {
     public var kind: String?
     public var sessionId: String?
     public var name: String?
+    /// "user" when `name` was set with `/rename`, "derived" for the
+    /// generated short code (e.g. "dev-0b").
+    public var nameSource: String?
     public var status: String?
     public var state: String?
     public var startedAt: Double?
@@ -19,17 +22,19 @@ public struct AgentRecord: Decodable, Equatable, Sendable {
     public var version: String?
 
     public init(pid: Int? = nil, cwd: String? = nil, kind: String? = nil,
-                sessionId: String? = nil, name: String? = nil, status: String? = nil,
+                sessionId: String? = nil, name: String? = nil, nameSource: String? = nil,
+                status: String? = nil,
                 state: String? = nil, startedAt: Double? = nil, statusUpdatedAt: Double? = nil,
                 waitingFor: String? = nil, version: String? = nil) {
         self.pid = pid; self.cwd = cwd; self.kind = kind
-        self.sessionId = sessionId; self.name = name; self.status = status
+        self.sessionId = sessionId; self.name = name; self.nameSource = nameSource
+        self.status = status
         self.state = state; self.startedAt = startedAt; self.statusUpdatedAt = statusUpdatedAt
         self.waitingFor = waitingFor; self.version = version
     }
 
     private enum CodingKeys: String, CodingKey {
-        case pid, cwd, kind, sessionId, name, status, state, startedAt, statusUpdatedAt,
+        case pid, cwd, kind, sessionId, name, nameSource, status, state, startedAt, statusUpdatedAt,
              waitingFor, version
     }
 

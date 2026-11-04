@@ -115,6 +115,36 @@ final class SessionBuilderTests: XCTestCase {
                        "Self-learn Swift programming — Working · 2m ago · not in tmux")
     }
 
+    func testUserRenameBeatsAITitle() {
+        // `/rename` sets the registry's name with nameSource "user", while
+        // Claude Code keeps appending the old AI title to the transcript.
+        var renamed = makeRecord(pid: 2, cwd: "/Users/dev/beta", status: "idle", name: "Assistant")
+        renamed.nameSource = "user"
+        var derived = makeRecord(pid: 3, cwd: "/Users/dev/gamma", status: "idle", name: "gamma-1f")
+        derived.nameSource = "derived"
+        var renamedUntitled = makeRecord(pid: 4, cwd: "/Users/dev/delta", status: "idle", name: "Loop")
+        renamedUntitled.nameSource = "user"
+        let sessions = SessionBuilder.build(
+            records: [renamed, derived, renamedUntitled], pidTtys: [:], panes: [],
+            titles: ["s2": "Comments from review", "s3": "Fix the parser"])
+        XCTAssertEqual(sessions.map(\.displayName), ["Assistant", "Fix the parser", "Loop"])
+    }
+
+    func testUserRenameOnBackgroundTwinWins() {
+        // The freshest record of a backgrounded session carries the newest name.
+        var stale = AgentRecord(pid: 10, cwd: "/Users/dev/app", kind: "interactive",
+                                sessionId: "s", name: "Old name", status: "idle",
+                                statusUpdatedAt: 1_000_000)
+        stale.nameSource = "user"
+        var live = AgentRecord(pid: 20, cwd: "/Users/dev/app", kind: "bg",
+                               sessionId: "s", name: "New name", status: "busy",
+                               statusUpdatedAt: 2_000_000)
+        live.nameSource = "user"
+        let sessions = SessionBuilder.build(records: [stale, live], pidTtys: [:], panes: [],
+                                            titles: ["s": "AI title"])
+        XCTAssertEqual(sessions.first?.displayName, "New name")
+    }
+
     func testBackgroundTwinDrivesStateOfItsInteractiveSession() {
         // A session moved to background keeps a stale interactive record and
         // a live bg record under the same sessionId. Freshest record wins the

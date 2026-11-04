@@ -42,6 +42,9 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   record under one sessionId** — merge by sessionId, freshest wins status.
 - **Session title** (`/status`/`/resume`) is persisted as `ai-title` lines in
   the transcript jsonl; transcripts contain binary bytes so `rg` needs `-a`.
+  A `/rename` wins over it: the registry's `name` with `nameSource:"user"`
+  (also `custom-title` lines). Claude Code keeps appending the *old*
+  `ai-title` after a rename, so reading only `ai-title` shows a stale name.
 - **tmux from a Finder-launched GUI app:** its `$TMPDIR` differs from the
   terminal's, so locate the server socket explicitly (`Tmux` helper scans
   `TMUX_TMPDIR`/`TMPDIR`/`/tmp`, passes `-S`). And **this tmux sanitizes tabs

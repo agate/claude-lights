@@ -61,6 +61,13 @@ lazy). The `name` field remains a derived short code (e.g. `dev-0b`),
 shown only as secondary text. Title lookup scans a large transcript tail on
 first sight of a session, then only a small tail per poll, cached in memory.
 
+**User renames (2026-11-03):** `/rename` sets the registry's `name` with
+`"nameSource":"user"` (and writes `custom-title` transcript lines), but
+Claude Code keeps appending the old `ai-title` afterwards. A user name
+therefore outranks the AI title: label = user name (freshest record of the
+session first) → AI title → `cwd` basename. It is read from the registry,
+so a rename shows on the next poll.
+
 **Verified live (2026-07-07, 2.1.207):** a session waiting for permission
 approval reports `"status": "waiting"` plus a bonus field
 `"waitingFor": "permission prompt"` — a human-readable wait reason the app

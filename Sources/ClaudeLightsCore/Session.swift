@@ -152,7 +152,7 @@ public enum SessionBuilder {
                     tmuxWindow: pane?.windowIndex,
                     tmuxPane: pane?.paneId,
                     waitingFor: primary.waitingFor,
-                    title: titles[id],
+                    title: userName(primary) ?? userName(anchor) ?? titles[id],
                     isOnScreen: visibleIds.contains(id),
                     version: primary.version ?? anchor.version,
                     startedAt: anchor.startedAt,
@@ -169,6 +169,15 @@ public enum SessionBuilder {
                 if l != r { return l < r }
                 return lhs.id < rhs.id
             }
+    }
+
+    /// The name the user gave with `/rename`. It outranks the AI title, which
+    /// Claude Code keeps appending to the transcript unchanged after a rename.
+    static func userName(_ record: AgentRecord) -> String? {
+        guard record.nameSource == "user",
+              let name = record.name?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !name.isEmpty else { return nil }
+        return name
     }
 
     public static func label(for light: LightState) -> String {
