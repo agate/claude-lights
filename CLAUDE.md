@@ -105,6 +105,12 @@ Read it before changing behavior. Per-fix rationale lives in `git log`.
   `/usage` itself computes the 1st of next month, local midnight
   (`CreditUsage.nextReset`). Demo: `CLAUDE_LIGHTS_DEMO_USAGE_FILE`; with a
   demo `CLAUDE_LIGHTS_SESSIONS_DIR` and no usage file, no probe runs.
+- **Never observe the status button's `effectiveAppearance`** (KVO) to
+  re-tint the tray icon: setting `button.image` makes AppKit redraw the
+  item's per-display copies, which flips that appearance and fires the
+  observer again — an endless loop at ~90% CPU. Resolve appearance-dependent
+  ink inside the `NSImage` drawing handler (`NSAppearance.currentDrawing()`)
+  instead; each menu bar then gets the right ink with no observer.
 
 ## Open issue
 - App is **ad-hoc signed** (no Team ID). macOS Automation (AppleScript)
