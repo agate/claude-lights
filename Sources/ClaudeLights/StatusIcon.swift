@@ -208,6 +208,14 @@ enum StatusIcon {
 /// bar filled bottom-up, no number. The meter never uses a state color: it is
 /// the menu bar's own ink (white on a dark bar, black on a light one; the
 /// template silhouette in monochrome), faded when the data is stale.
+///
+/// The ink is resolved inside the drawing handler from the appearance being
+/// drawn into, not baked in up front: AppKit draws one copy of the status
+/// item per menu bar (each display can be light or dark) and redraws it when
+/// the appearance changes. Observing `effectiveAppearance` and swapping the
+/// image instead loops forever — every `image` set makes AppKit redraw those
+/// copies, which flips the button's appearance and fires the observer again
+/// (≈90% CPU, idle).
 enum UsageMeterIcon {
     static let width: CGFloat = 5
     static let gap: CGFloat = 2
@@ -218,15 +226,16 @@ enum UsageMeterIcon {
     private static var cache: [String: NSImage] = [:]
 
     static func image(disc: NSImage, light: LightState, rotation: CGFloat, monochrome: Bool,
-                      fraction: Double, stale: Bool, darkMenuBar: Bool) -> NSImage {
+                      fraction: Double, stale: Bool) -> NSImage {
         let step = Int((min(max(fraction, 0), 1) * Double(steps)).rounded())
-        let key = "\(light)-\(rotation)-\(monochrome)-\(step)-\(stale)-\(darkMenuBar)"
+        let key = "\(light)-\(rotation)-\(monochrome)-\(step)-\(stale)"
         if let cached = cache[key] { return cached }
         let height = disc.size.height
         let size = NSSize(width: disc.size.width + gap + width + 1, height: height)
-        let ink: NSColor = monochrome || !darkMenuBar ? .black : .white
         let alpha: CGFloat = stale ? 0.35 : 0.85
         let image = NSImage(size: size, flipped: false) { _ in
+            let dark = NSAppearance.currentDrawing().bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            let ink: NSColor = monochrome || !dark ? .black : .white
             disc.draw(at: .zero, from: .zero, operation: .sourceOver, fraction: 1)
             // Same height as the disc's circle (the disc image has a 1 pt margin).
             let outer = NSRect(x: disc.size.width + gap, y: 1.5, width: width, height: height - 3)

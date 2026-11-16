@@ -43,7 +43,6 @@ final class StatusItemController: NSObject {
 
     // Variable: the usage meter widens the icon.
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    private var appearanceObservation: NSKeyValueObservation?
     private var sessions: [Session] = []
     /// ⌥ submenus of the open menu; items target them weakly.
     private var detailMenus: [SessionDetailsMenu] = []
@@ -59,10 +58,8 @@ final class StatusItemController: NSObject {
         let menu = NSMenu()
         menu.delegate = self // rebuilt on open so toggle states are always live
         item.menu = menu
-        // The meter's ink follows the menu bar (light/dark wallpaper too).
-        appearanceObservation = item.button?.observe(\.effectiveAppearance) { [weak self] _, _ in
-            DispatchQueue.main.async { self?.refreshButtonImage() }
-        }
+        // No effectiveAppearance observer: the meter resolves its ink at draw
+        // time (see UsageMeterIcon), and observing it loops at ~90% CPU.
     }
 
     func update(sessions: [Session], error: String?) {
@@ -88,11 +85,9 @@ final class StatusItemController: NSObject {
             item.button?.image = disc
             return
         }
-        let dark = button.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
         button.image = UsageMeterIcon.image(
             disc: disc, light: aggregate, rotation: spinAngle, monochrome: IconStyle.monochrome,
-            fraction: session.fractionUsed, stale: usage?.isStale(now: Date()) ?? false,
-            darkMenuBar: dark)
+            fraction: session.fractionUsed, stale: usage?.isStale(now: Date()) ?? false)
     }
 
     private func startSpinner() {
